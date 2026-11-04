@@ -1,0 +1,104 @@
+{% extends "base.html" %}{% block content %}
+<div class="card">
+  <span class="eyebrow">Your electricity usage</span>
+  <h2>Use your electricity bill for a better consumption estimate</h2>
+  <p class="note">For the most realistic personal result, enter the <b>monthly kWh / units</b> shown on your electricity bill. If your bill does not show units, enter the bill amount and an approximate tariff. Monthly kWh is preferred because electricity tariffs can vary by slab and fixed charges.</p>
+  <form method="get" id="billForm">
+    <input type="hidden" name="date" value="{{ date }}">
+    <input type="hidden" name="system_kw" value="{{ system_kw }}">
+    <div class="row">
+      <div><label for="monthly_units">Monthly electricity use (kWh / units) <span class="note">preferred</span></label><input id="monthly_units" type="number" name="monthly_units" min="0" max="10000000" step="0.1" value="{{ monthly_units }}" placeholder="e.g. 300"></div>
+      <div><label for="monthly_bill">Monthly electricity bill (₹) <span class="note">if units are unknown</span></label><input id="monthly_bill" type="number" name="monthly_bill" min="0" max="100000000" step="100" value="{{ monthly_bill }}" placeholder="e.g. 2500"></div>
+      <div><label for="tariff">Approx. tariff (₹/kWh)</label><input id="tariff" type="number" name="tariff" min="0.01" max="1000" step="0.01" value="{{ tariff }}"><div class="note">Used only when monthly kWh is not entered.</div></div>
+    </div>
+    <button type="submit" style="margin-top:16px">Calculate bill-based consumption</button>
+  </form>
+  {% if bill_data %}<div class="stats" style="margin-top:20px"><div class="stat">Estimated monthly use<b>{{ "%.1f"|format(bill_data.monthly_kwh) }} kWh</b>{{ bill_data.source }}</div><div class="stat">Average daily use<b>{{ "%.2f"|format(bill_data.daily_kwh) }} kWh/day</b>monthly use ÷ 30 days</div></div>{% endif %}
+</div>
+
+<div class="card">
+  <span class="eyebrow">Smart energy planner</span>
+  <h1>Plan Your Energy Usage</h1>
+  <p>Set how many hours you expect to use each appliance. EcoGrid estimates the energy required, compares it with forecast solar generation, and suggests which flexible usage to reduce first if there may be a shortage.</p>
+  <form method="get" id="usageForm">
+    <div class="row">
+      <div><label for="date">Plan date</label><input id="date" type="date" name="date" value="{{ date }}" required></div>
+      <div><label for="system_kw">Solar system size (kW)</label><input id="system_kw" type="number" name="system_kw" min="0.1" max="100000" step="0.1" value="{{ system_kw }}" required></div>
+    </div>
+    <p class="note">For the most relevant comparison, first choose your location on the <a href="{{ url_for('generation') }}">Solar generation</a> page. The size here should be your solar system's rated capacity, not your daily energy use.</p>
+    <h2 style="margin-top:26px">Daily appliance usage</h2>
+    <p class="note">Choose the number of hours per day for each appliance. For “Other appliance”, enter its name, rated power in watts and usage hours. Typical wattages are examples and can differ from your actual appliances.</p>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;min-width:580px">
+        <thead><tr style="text-align:left;border-bottom:1px solid #dce6d9"><th style="padding:10px">Appliance</th><th style="padding:10px">Assumed power</th><th style="padding:10px">Hours / day</th><th style="padding:10px">Estimated energy</th></tr></thead>
+        <tbody>
+        {% for a in appliances %}
+          <tr style="border-bottom:1px solid #edf1e9">
+            <td style="padding:10px">
+              {% if a.key == 'other' %}
+                <input type="text" name="other_name" maxlength="60" value="{{ a.custom_name if a.custom_name is defined else 'Other appliance' }}" placeholder="e.g. Water pump" aria-label="Other appliance name" style="min-width:145px">
+              {% else %}<b>{{ a.name }}</b>{% endif %}
+              <div class="note">{% if a.essential %}Essential{% else %}Flexible usage{% endif %}</div>
+            </td>
+            <td style="padding:10px;white-space:nowrap">
+              {% if a.key == 'other' %}<input style="max-width:125px" type="number" name="other_watts" min="0" max="1000000" step="1" value="{{ a.watts }}" aria-label="Power rating in watts" placeholder="Watts"> W
+              {% else %}{{ a.watts }} W{% endif %}
+            </td>
+            <td style="padding:10px"><input style="max-width:125px" type="number" name="{{ a.key }}_hours" min="0" max="24" step="0.5" value="{{ a.hours if a.hours is defined else a.default }}" aria-label="Hours for {{ a.name }}"></td>
+            <td style="padding:10px;white-space:nowrap">{{ "%.2f"|format(a.energy if a.energy is defined else a.watts / 1000 * a.default) }} kWh</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <button type="submit" style="margin-top:20px">Calculate energy & suggestions</button>
+  </form>
+</div>
+
+{% if error %}<div class="card"><div class="flash error">{{ error }}</div></div>{% endif %}
+{% if plan_ready %}
+<div class="card">
+  <h2>Your energy balance</h2>
+  <div class="stats">
+    <div class="stat">Appliance energy needed<b>{{ "%.2f"|format(appliance_total) }} kWh</b>Based on your selected hours</div>
+    {% if generation_kwh is not none %}<div class="stat">Forecast solar energy<b>{{ "%.2f"|format(generation_kwh) }} kWh</b>{{ system_kw }} kW system estimate</div>
+    <div class="stat">Energy balance<b>{{ "%+.2f"|format(energy_balance) }} kWh</b>{% if energy_balance >= -0.01 %}Estimated solar surplus{% else %}Estimated energy shortfall{% endif %}</div>{% endif %}
+  </div>
+  {% if generation_error %}
+    <div class="warn"><b>Could not compare with solar generation.</b> {{ generation_error }} Choose a forecast date supported by the weather service, check your internet connection, and select your location on the Solar generation page. Your appliance energy estimate above is still calculated.</div>
+  {% elif shortage_kwh > 0.01 %}
+    <div class="warn"><b>Energy shortage predicted: {{ "%.2f"|format(shortage_kwh) }} kWh.</b> Your selected appliances may need more energy than the solar forecast provides. EcoGrid prioritizes reducing flexible usage and does not recommend turning off essential appliances.</div>
+    {% if suggestions %}
+      <h3>Suggestions — reduce these first</h3>
+      <ol>
+      {% for s in suggestions %}
+        <li style="margin:12px 0"><b>{{ s.name }}:</b> reduce by about {{ "%.1f"|format(s.hours) }} hour(s), saving approximately {{ "%.2f"|format(s.saved) }} kWh. <span class="note">{{ s.description }}</span></li>
+      {% endfor %}
+      </ol>
+    {% endif %}
+    {% if uncovered_shortage is not none and uncovered_shortage > 0.05 %}
+      <div class="warn">Even after reducing the flexible usage above, about {{ "%.2f"|format(uncovered_shortage) }} kWh may still be missing. Consider shifting more usage to sunny hours, using a suitable battery, or drawing the remaining energy from the grid. Do not reduce medically necessary equipment or essential cooling.</div>
+    {% else %}
+      <div class="good">Following these reductions could bring the selected appliance estimate close to the forecast solar supply. Actual results depend on real appliance power, solar conditions, battery state and grid availability.</div>
+    {% endif %}
+  {% else %}
+    <div class="good"><b>No shortage predicted for the selected appliances.</b> The estimated solar generation covers this appliance plan. If you add more appliances or increase their hours, calculate again to check the updated balance.</div>
+    <p class="note">You can still save energy by running washing machines and water heaters during sunny hours, when solar output is usually stronger.</p>
+  {% endif %}
+  <p class="note">This is a forecast, not a live meter reading. Appliance energy uses typical wattage × hours. Solar output is a model estimate and may change with clouds, weather, inverter losses, battery capacity and actual panel performance. The calculation compares selected appliance energy with solar generation; it does not assume that all generated energy is available at every hour.</p>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Reference AI energy demand forecast</h2><p class="note">This is a separate historical-data model for demonstration and comparison. It is not used as your personal consumption estimate when bill-based usage is available.</p>
+  {% if not error %}
+    <img class="chart" src="data:image/png;base64,{{ chart }}" alt="Energy consumption forecast chart">
+    <div class="stats">
+      <div class="stat">Model demand forecast<b>{{ "%.0f"|format(total_exp) }} kWh</b></div>
+      <div class="stat">Peak demand<b>{{ "%.1f"|format(peak) }} kW</b>at {{ "%02d"|format(peak_hour) }}:00</div>
+      {% if total_actual is not none %}<div class="stat">Recorded demand<b>{{ "%.0f"|format(total_actual) }} kWh</b></div>{% endif %}
+    </div>
+    <p class="note">Average error on unseen months: about {{ "%.1f"|format(mape) }}%. The model has no holiday or appliance-level information. Use the appliance planner above to estimate how changing your own hours affects energy demand.</p>
+  {% endif %}
+</div>
+{% endblock %}

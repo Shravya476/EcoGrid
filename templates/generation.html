@@ -1,0 +1,100 @@
+{% extends "base.html" %}{% block content %}
+<div class="card">
+<h1>Future Solar Energy Generation</h1>
+<p class="note">EcoGrid uses your plant capacity and type together with a live weather forecast. Because a newly installed plant has no historical generation data, this forecast does <b>not</b> pretend to learn from another plant.</p>
+<form method="get" id="mainForm">
+  <input type="hidden" name="lat" value="{{ loc.lat }}">
+  <input type="hidden" name="lon" value="{{ loc.lon }}">
+  <input type="hidden" name="name" value="{{ loc.name }}">
+  <input type="hidden" name="plant_status" id="plantStatus" value="{{ loc.plant_status|default('existing') }}">
+
+<section id="plant-section" class="setup-section plant-section">
+  <div class="section-head"><div><span class="step-badge">01</span><div><div class="section-kicker">PLANT SETUP</div><h3>Tell EcoGrid about your solar plant</h3></div></div></div>
+  <p class="section-intro">Choose one option below. EcoGrid will only show the questions you need.</p>
+  <div class="mode-grid">
+    <label class="mode-card"><input type="radio" name="plantMode" value="existing" {% if loc.plant_status|default('existing') == 'existing' %}checked{% endif %} onchange="togglePlantMode()"><span class="mode-icon">☀</span><span><b>I already have a solar plant</b><small>Enter the details you know. Unknown details can be left as standard assumptions.</small></span></label>
+    <label class="mode-card"><input type="radio" name="plantMode" value="planning" {% if loc.plant_status|default('existing') == 'planning' %}checked{% endif %} onchange="togglePlantMode()"><span class="mode-icon">＋</span><span><b>I am planning to install one</b><small>Tell us your bill and available space. EcoGrid will suggest a practical size.</small></span></label>
+  </div>
+
+  <div id="existingFields" class="detail-panel">
+    <div class="field-grid three">
+      <div><label>Plant capacity <span class="note">if known</span></label><input type="number" name="kw" value="{{ loc.kw if loc.capacity_source != 'recommended' else '' }}" min="0.1" max="100000" step="0.1" placeholder="e.g. 5 kW"></div>
+      <div><label>Solar panel type</label><select name="plant_type"><option value="unknown" {% if not loc.plant_type_known|default(true) %}selected{% endif %}>I don't know</option><option value="monocrystalline" {% if loc.plant_type=='monocrystalline' and loc.plant_type_known|default(true) %}selected{% endif %}>Monocrystalline</option><option value="polycrystalline" {% if loc.plant_type=='polycrystalline' and loc.plant_type_known|default(true) %}selected{% endif %}>Polycrystalline</option><option value="thin-film" {% if loc.plant_type=='thin-film' and loc.plant_type_known|default(true) %}selected{% endif %}>Thin-film</option></select></div>
+      <div><label>Mounting / tracking</label><select name="mounting"><option value="unknown" {% if not loc.mounting_known|default(true) %}selected{% endif %}>I don't know</option><option value="fixed" {% if loc.mounting=='fixed' and loc.mounting_known|default(true) %}selected{% endif %}>Fixed tilt</option><option value="single-axis" {% if loc.mounting=='single-axis' and loc.mounting_known|default(true) %}selected{% endif %}>Single-axis tracking</option><option value="dual-axis" {% if loc.mounting=='dual-axis' and loc.mounting_known|default(true) %}selected{% endif %}>Dual-axis tracking</option></select></div>
+    </div>
+    <div class="helper-box">💡 <b>Don't know these details?</b> No problem. Leave them unknown and EcoGrid will use a standard assumption for the forecast.</div>
+  </div>
+
+  <div id="planningFields" class="detail-panel planning-panel" style="display:none">
+    <div class="field-grid three"><div><label>What is the plant for?</label><select name="purpose"><option value="home">Home</option><option value="shop">Shop / small business</option><option value="school">School / college</option><option value="office">Office</option><option value="factory">Factory / industry</option><option value="other">Other</option></select></div><div><label>Approximate monthly electricity bill</label><div class="input-prefix"><span>₹</span><input type="number" name="monthly_bill" min="0" step="100" placeholder="e.g. 3000"></div></div><div><label>Available roof / land area <span class="note">optional</span></label><div class="input-suffix"><input type="number" name="area" min="1" step="1" placeholder="e.g. 100"><span>m²</span></div></div></div>
+    <div class="helper-box planning-help">🌱 <b>Simple planning:</b> You don't need to know kW or panel type. EcoGrid estimates a suitable capacity and uses standard solar assumptions for the forecast.</div>
+  </div>
+
+  <div id="forecast-section" class="forecast-bar">
+    <div><span class="forecast-label">02 · FORECAST</span><label>How far ahead should EcoGrid predict?</label></div>
+    <select name="horizon"><option value="24" {% if horizon==24 %}selected{% endif %}>Next 24 hours</option><option value="48" {% if horizon==48 %}selected{% endif %}>Next 48 hours</option></select>
+    <button type="submit" class="forecast-btn">Forecast solar generation →</button>
+  </div>
+</section>
+  </form>
+
+{% if loc.capacity_source == 'recommended' %}<div class="result-callout good"><b>Recommended plant size: {{ "%.1f"|format(loc.kw) }} kW</b><span>EcoGrid estimated this from your planning details. It is a planning estimate, not a final engineering quote.</span></div>{% endif %}
+{% if not loc.plant_type_known|default(true) %}<div class="result-callout info"><b>Panel type</b><span>Standard Monocrystalline assumption is being used for this forecast.</span></div>{% endif %}
+{% if not loc.mounting_known|default(true) %}<div class="result-callout info"><b>Mounting</b><span>Standard Fixed-tilt assumption is being used for this forecast.</span></div>{% endif %}
+
+<script>
+function togglePlantMode(){
+  const mode=document.querySelector('input[name="plantMode"]:checked')?.value || 'existing';
+  const existing=document.getElementById('existingFields');
+  const planning=document.getElementById('planningFields');
+  const status=document.getElementById('plantStatus');
+  if(!existing || !planning || !status) return;
+  const isPlanning=mode==='planning';
+  existing.style.display=isPlanning?'none':'block';
+  planning.style.display=isPlanning?'block':'none';
+  status.value=mode;
+  existing.querySelectorAll('input,select').forEach(el=>el.disabled=isPlanning);
+  planning.querySelectorAll('input,select').forEach(el=>el.disabled=!isPlanning);
+}
+document.addEventListener('DOMContentLoaded', togglePlantMode);
+</script>
+{% if error %}<div class="card"><div class="flash error">{{ error }}</div></div>{% else %}
+<div class="card"><h2>2. Weather + solar generation forecast</h2>
+<p class="note">{{ mode }}</p>
+<div class="stats">
+<div class="stat">Plant capacity<b>{{ "%.1f"|format(capacity) }} kW</b>{{ plant_type_label }}</div>
+<div class="stat">Mounting<b>{{ mounting_label }}</b> </div>
+<div class="stat">Forecast window<b>{{ forecast_hours }} hours</b>Next {{ forecast_hours }} hours</div>
+</div>
+<img class="chart" src="data:image/png;base64,{{ chart }}" alt="Solar generation forecast chart">
+<div class="stats">
+<div class="stat">Expected solar energy<b>{{ "%.1f"|format(total_exp) }} kWh</b></div>
+<div class="stat">Estimated range<b>{{ "%.1f"|format(total_low) }} - {{ "%.1f"|format(total_high) }} kWh</b></div>
+<div class="stat">Peak predicted power<b>{{ "%.1f"|format(peak) }} kW</b></div>
+</div>
+<p class="note"><b>Climate situation:</b> {{ weather_situation }}. Average cloud cover {{ "%.0f"|format(avg_cloud) }}%, average temperature {{ "%.1f"|format(avg_temp) }}°C. {{ clear_hours }} forecast hours are mostly clear, {{ cloudy_hours }} are heavily cloudy, and {{ rainy_hours }} have at least 1 mm of forecast rain.</p>
+<p class="note">{{ band_note }}</p>
+</div>
+
+<div class="card"><h2>3. Live cloud outlook</h2>
+<p>Cloud information is kept as an additional signal. It uses the existing Himawari-9 satellite feature when coverage is available.</p>
+{% if coverage[0] == "no" %}<div class="warn">{{ coverage[1] }}</div>{% elif coverage[0] == "edge" %}<p class="note">{{ coverage[1] }}</p>{% endif %}
+<button type="button" id="cloudBtn">Check clouds now</button>{% if loc.reference %} <button type="button" id="cloudDemoBtn" style="background:#607d8b">Demo with recent satellite images</button>{% endif %}
+<div id="cloudOut" style="margin-top:14px"></div>
+<p class="note">The satellite feature is optional. The 24/48-hour generation forecast does not depend on it, so the app can still work when satellite coverage is unavailable.</p></div>
+
+<div class="card"><h2>4. Energy outlook</h2>
+<p class="note">This compares forecast solar generation with your estimated electricity use from your monthly bill or monthly kWh. It is an estimate, not a live meter reading.</p>
+<div class="stats">
+<div class="stat">Forecast solar generation<b>{{ "%.1f"|format(total_exp) }} kWh</b>next {{ forecast_hours }} hours</div>
+{% if representative_demand is not none %}<div class="stat">Representative energy demand<b>{{ "%.1f"|format(representative_demand) }} kWh</b>based on your bill{% if bill_data and bill_data.monthly_kwh %} ({{ "%.0f"|format(bill_data.monthly_kwh) }} kWh/month){% endif %}</div>
+<div class="stat">Energy balance<b>{{ "%+.1f"|format(energy_balance) }} kWh</b>{% if energy_balance >= 0 %}estimated surplus{% else %}estimated shortfall{% endif %}</div>{% else %}<div class="stat">Representative energy demand<b>Not provided</b>Enter bill or monthly kWh</div>{% endif %}
+</div>
+{% if representative_demand is not none %}{% if energy_balance >= 0 %}<div class="good"><b>Positive energy outlook.</b> Your forecast solar generation is higher than the estimated electricity use for this forecast window.</div>{% else %}<div class="warn"><b>Potential energy shortfall.</b> The estimated electricity use is higher than the forecast solar generation for this forecast window.</div>{% endif %}
+<p class="note">Consumption basis: {{ bill_data.source }}. Average daily use is calculated from 30 days per month. Actual billing can differ because tariffs, fixed charges and slab rates vary.</p>{% else %}<div class="info"><b>Add your electricity usage to personalize this result.</b> Open <a href="{{ url_for('consumption') }}">Future Energy Consumption</a> and enter the monthly kWh shown on your bill, or enter the monthly bill amount with an approximate tariff.</div>{% endif %}
+</div>
+<script>
+async function runCloud(demo){const out=document.getElementById("cloudOut");out.textContent="Fetching satellite images...";try{const r=await (await fetch("{{ url_for('api_cloud') }}"+(demo?"?demo=1":""))).json();if(!r.ok){out.innerHTML='<div class="warn">'+r.message+'</div>';return;}let html='<div class="'+(r.level==="warn"?"warn":(r.level==="info"?"info":"good"))+'"><b>'+r.alert+'</b></div>';if(r.image)html+='<p><img class="chart" src="data:image/png;base64,'+r.image+'" alt="Satellite cloud pictures"></p>';html+='<p>Newest image: '+r.newest_local+' '+r.tz_label+' ('+r.minutes_old+' minutes old).';if(r.mode==="forecast")html+='<br>Estimated sunshine now: '+Math.round(r.now*100)+'%. Next 1-3 hours: '+r.forecast.map(v=>Math.round(v*100)+"%").join(", ");else html+='<br>Cloudy share over recent images: '+r.cloud_share.map(v=>v+"%").join(" -> ");html+='</p>';if(r.note)html+='<p class="note">'+r.note+'</p>';out.innerHTML=html;}catch(e){out.innerHTML='<div class="warn">Could not get the cloud outlook.</div>';}}
+document.getElementById("cloudBtn").onclick=()=>runCloud(false);if(document.getElementById("cloudDemoBtn"))document.getElementById("cloudDemoBtn").onclick=()=>runCloud(true);
+</script>
+{% endif %}{% endblock %}

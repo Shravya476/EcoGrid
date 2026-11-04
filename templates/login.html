@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block title %}Log in | EcoGrid AI{% endblock %}{% block content %}
+<div class="auth-fullscreen">
+  <video class="auth-fullscreen-video" autoplay muted loop playsinline webkit-playsinline preload="auto" poster="https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1800&q=85" aria-hidden="true" id="solar-farm-login"><source src="https://videos.pexels.com/video-files/2804592/2804592-uhd_3840_2160_24fps.mp4" type="video/mp4"></video>
+  <div class="auth-fullscreen-shade"></div>
+  <a class="auth-floating-brand" href="{{ url_for('login') }}"><img src="{{ url_for('static', filename='ecogrid_logo.png') }}" alt=""><span>EcoGrid <b>AI</b><small>Solar Energy Intelligence</small></span></a>
+  <div class="auth-fullscreen-layout">
+    <section class="auth-promo"><span class="hero-tag">☀ Renewable energy intelligence</span><h2>Make every ray count.</h2><p>Your solar insights, generation forecasts, and energy outlook — all in one place.</p><div class="auth-promo-points"><span>☀ Solar generation</span><span>◷ 24–48 hour forecasts</span><span>↗ Smarter energy decisions</span></div></section>
+    <section class="auth-glass-card"><div class="eyebrow">Welcome back</div><h1>Log in to EcoGrid</h1><p class="note">Continue to your clean-energy dashboard.</p><form method="post"><label>Username</label><input type="text" name="username" autocomplete="username" placeholder="Enter your username" maxlength="30" required><label>Password</label><input type="password" name="password" autocomplete="current-password" placeholder="Enter your password" required><button type="submit">Log in <span aria-hidden="true">→</span></button></form><p class="note auth-switch-note">No account yet? <a href="{{ url_for('register') }}">Create one</a></p><div class="form-foot">SOLAR GENERATION · ENERGY CONSUMPTION · SMARTER PLANNING</div></section>
+  </div>
+  <div class="auth-video-credit">POWERED BY THE SUN · BUILT FOR TOMORROW</div>
+</div>
+<script>(function(){var v=document.getElementById('solar-farm-login');if(!v)return;v.muted=true;v.defaultMuted=true;var start=function(){var p=v.play();if(p&&p.catch)p.catch(function(){document.addEventListener('click',function retry(){v.play().catch(function(){});document.removeEventListener('click',retry);},{once:true});});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();document.addEventListener('visibilitychange',function(){if(!document.hidden&&v.paused)start();});})();</script>
+{% endblock %}

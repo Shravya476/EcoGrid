@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Home | EcoGrid{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<div class="option1-dashboard">
+  <section class="option1-heading">
+    <div><div class="option1-welcome-small">SMART ENERGY DASHBOARD</div><h1>Welcome, {{ session.user }}!</h1><p>Smarter energy decisions for a sustainable future.</p></div>
+    <div class="option1-date" id="homeLocationStatus">{{ 'My Live Location' if request.args.get('phone_location') else (saved_location.name if saved_location else 'Getting your location…') }}<small>{{ 'Current device GPS' if request.args.get('phone_location') else ('Saved location' if saved_location else 'Checking current device GPS') }}</small></div>
+  </section>
+
+<section class="design6-hero" id="weather-section">
+  <div class="design6-hero-image">
+    <div class="design6-sun-glow"></div>
+    <div class="design6-mountain m1"></div><div class="design6-mountain m2"></div><div class="design6-mountain m3"></div>
+    <div class="design6-hero-overlay"></div>
+    <div class="design6-hero-copy">
+      <span class="design6-eyebrow">SMART SOLAR INTELLIGENCE</span>
+      <h1>Good morning, {{ session.user }}!</h1>
+      <p>Let EcoGrid plan a smarter energy day around your local weather.</p>
+      <div class="design6-live-location"><span>●</span> {{ 'My Live Location' if request.args.get('phone_location') else (saved_location.name if saved_location else 'Location pending') }}<small>{{ 'Fresh device GPS' if request.args.get('phone_location') else ('Saved forecast location' if saved_location else 'Waiting for location') }}</small></div>
+    </div>
+    <div class="design6-weather-card" id="weather-card">
+      {% if weather %}
+      <div class="design6-weather-top"><span>LIVE WEATHER</span><span>{{ weather.timezone }}</span></div>
+      <div class="design6-weather-main"><div><strong>{{ weather.temperature }}°</strong><b>{{ weather.condition }}</b><span>Feels like {{ weather.feels }}°</span></div><span class="design6-weather-icon">{{ weather.icon }}</span></div>
+      <div class="design6-weather-facts"><span>Humidity <b>{{ weather.humidity }}%</b></span><span>Wind <b>{{ weather.wind }} km/h</b></span><span>Today <b>{{ weather.min }}° / {{ weather.max }}°</b></span></div>
+      {% else %}
+      <div class="design6-weather-top"><span>LIVE WEATHER</span></div><div class="design6-weather-main"><div><strong>--°</strong><b>Waiting for location</b><span>Weather will appear here</span></div><span class="design6-weather-icon">☀</span></div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="option1-metrics">
+    <a class="option1-metric solar" href="{{ url_for('generation') }}"><span class="metric-symbol">☀</span><div><small>Solar Generation</small><em>Forecast · 24h</em><strong>{{ '%.1f'|format(forecast_energy) if forecast_energy is defined and forecast_energy is not none else '--' }} kWh</strong><b>↑ Weather-based forecast</b></div></a>
+    <a class="option1-metric consumption" href="{{ url_for('consumption') }}"><span class="metric-symbol">⌂</span><div><small>Your Consumption</small><em>From Electricity Bill</em><strong>{{ '%.1f'|format(daily_consumption) if daily_consumption is defined and daily_consumption is not none else '--' }} kWh/day</strong><b>Avg. daily usage</b></div></a>
+    <a class="option1-metric balance" href="{{ url_for('generation') }}#forecast-section"><span class="metric-symbol">ϟ</span><div><small>Energy Balance</small><em>Solar vs Consumption</em><strong>{% if balance is defined and balance is not none %}{{ '%+.1f'|format(balance) }} kWh{% else %}-- kWh{% endif %}</strong><b>Expected surplus / deficit</b></div></a>
+    <a class="option1-metric plant" href="{{ url_for('generation') }}#plant-section"><span class="metric-symbol">▦</span><div><small>Plant Setup</small><em>Installed capacity</em><strong>{{ '%.0f'|format(plant_capacity) if plant_capacity is defined and plant_capacity is not none else '5' }} kW</strong><b>Manage plant →</b></div></a>
+  </section>
+
+
+  {% if weather %}
+  <section class="option1-panel weather-detail-panel" id="weather-detail">
+    <div class="panel-title"><div><small>LIVE WEATHER</small><h2>Weather at {{ 'My Live Location' if request.args.get('phone_location') else saved_location.name }}</h2></div><span class="weather-time">{{ weather.timezone }}</span></div>
+    <div class="weather-current-grid">
+      <div class="weather-current-main"><span class="weather-big-icon">{{ weather.icon }}</span><div><strong>{{ weather.temperature }}°C</strong><b>{{ weather.condition }}</b><span>Feels like {{ weather.feels }}°C</span></div></div>
+      <div class="weather-fact"><span>Humidity</span><b>{{ weather.humidity }}%</b></div>
+      <div class="weather-fact"><span>Wind</span><b>{{ weather.wind }} km/h</b></div>
+      <div class="weather-fact"><span>Rain now</span><b>{{ weather.rain }} mm</b></div>
+      <div class="weather-fact"><span>Solar radiation</span><b>{{ weather.solar }} W/m²</b></div>
+      <div class="weather-fact"><span>Today</span><b>{{ weather.min }}° / {{ weather.max }}°</b></div>
+    </div>
+    <div class="weather-source-note">Source: {{ weather.source }} · Weather time: {{ weather.updated }} · Coordinates used: {{ '%.6f'|format(weather.lat) }}, {{ '%.6f'|format(weather.lon) }}</div>{% if request.args.get('phone_location') %}<div class="live-gps-note">● Live device location · Fresh GPS coordinates received from this device</div>{% endif %}
+    <div class="weather-subtitle">Next hours</div>
+    <div class="weather-hourly">
+      {% for h in weather.hourly %}<div><small>{{ h.time }}</small><strong>{{ h.temperature }}°</strong><span>{{ '☀' if h.code == 0 else ('🌧' if h.code >= 51 else ('☁' if h.code >= 3 else '⛅')) }}</span></div>{% endfor %}
+    </div>
+    <div class="weather-subtitle">Multi-day forecast</div>
+    <div class="weather-daily">
+      {% for d in weather.daily %}<div><small>{{ d.date }}</small><em>{{ d.date_num }}</em><b>{{ d.description }}</b><strong>{{ d.max }}°</strong><span>{{ d.min }}°</span></div>{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="option1-lower-grid">
+    <div class="option1-panel chart-panel" id="forecast-section"><div class="panel-title"><div><small>FORECAST</small><h2>Solar Generation Forecast <span>(Next 24 Hours)</span></h2></div><a href="{{ url_for('generation') }}">View details →</a></div><div class="fake-chart"><div class="chart-y"><span>200</span><span>150</span><span>100</span><span>50</span><span>0</span></div><svg viewBox="0 0 700 230" preserveAspectRatio="none" aria-label="Solar generation forecast"><defs><linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#53c96c" stop-opacity=".35"/><stop offset="1" stop-color="#53c96c" stop-opacity="0"/></linearGradient></defs><path class="gridline" d="M0 35H700 M0 80H700 M0 125H700 M0 170H700 M0 215H700"/><path class="area" d="M0 202 C70 184 105 150 170 110 C235 70 280 44 340 48 C410 54 445 90 510 102 C575 115 610 150 700 185 L700 215 L0 215 Z"/><path class="line" d="M0 202 C70 184 105 150 170 110 C235 70 280 44 340 48 C410 54 445 90 510 102 C575 115 610 150 700 185"/><circle cx="340" cy="48" r="5" class="chart-dot"/></svg><div class="chart-x"><span>6 AM</span><span>9 AM</span><span>12 PM</span><span>3 PM</span><span>6 PM</span><span>9 PM</span></div></div></div>
+    <div class="option1-panel satellite-panel" id="satellite-section"><div class="panel-title"><div><small>SATELLITE MAP</small><h2>Satellite View</h2></div><a href="{{ url_for('generation') }}#satellite-section">View details</a></div><div id="homeSatelliteMap" class="home-satellite-map"></div><div class="satellite-map-note">Satellite imagery · location pin</div></div>
+  </section>
+
+  <section class="option1-clean-banner"><span><img class="clean-banner-logo" src="{{ url_for('static', filename='ecogrid_logo.png') }}" alt="EcoGrid"></span><div><small>CLEAN ENERGY</small><h2>Small steps. Big impact.</h2><p>EcoGrid turns your location, weather and plant information into practical energy decisions.</p></div></section>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+function getPhoneLocation(done){
+  if(!navigator.geolocation){homeMsg.textContent='Location is not supported by this browser.';return;}
+  navigator.geolocation.getCurrentPosition(async p=>{
+    let name='Current phone location';
+    try{const r=await (await fetch('{{ url_for("api_reverse_geocode") }}?lat='+encodeURIComponent(p.coords.latitude)+'&lon='+encodeURIComponent(p.coords.longitude),{cache:'no-store'})).json();if(r.ok&&r.name)name=r.name;}catch(e){}
+    const place={lat:Number(p.coords.latitude),lon:Number(p.coords.longitude),name:name,accuracy:Number(p.coords.accuracy)||0};
+    if(done) done(place);
+  },err=>{
+    const msg=err && err.code===1 ? 'Location permission was denied. Please allow Location for EcoGrid in Chrome.' : err && err.code===2 ? 'Your phone could not determine its current location. Turn ON Location/GPS and try again.' : 'GPS is taking longer than expected. Keep Location/GPS ON.';
+    const gateMsg=document.getElementById('phoneLocationGateMsg'); if(gateMsg) gateMsg.textContent=msg;
+  },{enableHighAccuracy:true,timeout:30000,maximumAge:0});
+}
+
+// LOCATION FLOW AFTER LOGIN:
+// Keep the real dashboard visible immediately. The browser's native location
+// permission prompt is requested in the background; once coordinates arrive,
+// the page refreshes with the live location and weather.
+(function requestLocationOnFreshLogin(){
+  const status=document.getElementById('homeLocationStatus');
+  const isFreshLogin={{ 'true' if request.args.get('fresh_location') == '1' else 'false' }};
+  const setStatus=(main,sub)=>{
+    if(!status) return;
+    status.childNodes[0].nodeValue=main;
+    const small=status.querySelector('small');
+    if(small) small.textContent=sub;
+  };
+  if(!isFreshLogin) return;
+
+  if(!window.isSecureContext){
+    setStatus('Location unavailable','EcoGrid needs HTTPS for device GPS');
+    return;
+  }
+  if(!navigator.geolocation){
+    setStatus('Location unavailable','This browser does not support GPS');
+    return;
+  }
+
+  setStatus('Getting your location…','Checking current device GPS');
+
+  navigator.geolocation.getCurrentPosition(async position=>{
+    const lat=Number(position.coords.latitude);
+    const lon=Number(position.coords.longitude);
+    let name='Current phone location';
+    try{
+      const r=await fetch('{{ url_for("api_reverse_geocode") }}?lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lon),{cache:'no-store',headers:{'Cache-Control':'no-cache'}});
+      const data=await r.json();
+      if(data.ok && data.name) name=data.name;
+    }catch(e){}
+    setStatus('Updating dashboard…','Using your current device GPS');
+    try{
+      const response=await fetch('{{ url_for("save_location") }}',{
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','Cache-Control':'no-cache'},
+        body:new URLSearchParams({name,lat:String(lat),lon:String(lon)}).toString(),
+        credentials:'same-origin',cache:'no-store'
+      });
+      if(response.ok){
+        window.location.replace('{{ url_for("home") }}?phone_location='+Date.now());
+        return;
+      }
+    }catch(e){}
+    setStatus('Location found','Could not save the current location.');
+  },err=>{
+    if(err && err.code===1) setStatus('Location permission needed','Allow Location in Chrome to load live weather');
+    else if(err && err.code===2) setStatus('Location unavailable','Turn ON Location/GPS and refresh');
+    else setStatus('Location taking longer','Keep Location/GPS ON while EcoGrid loads');
+  },{enableHighAccuracy:true,timeout:30000,maximumAge:0});
+})();
+
+{% if saved_location %}
+(function(){
+  const lat={{ saved_location.lat|tojson }}, lon={{ saved_location.lon|tojson }};
+  const el=document.getElementById('homeSatelliteMap');
+  if(!el || typeof L==='undefined') return;
+  const map=L.map(el,{zoomControl:true,scrollWheelZoom:false,attributionControl:true}).setView([lat,lon],13);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(map);
+  L.circleMarker([lat,lon],{radius:8,weight:3,fillOpacity:.85}).addTo(map).bindPopup('<b>{{ 'My Live Location' if request.args.get('phone_location') else saved_location.name|e }}</b><br>{{ 'Current device GPS position' if request.args.get('phone_location') else 'Saved EcoGrid location' }}').openPopup();
+  setTimeout(()=>map.invalidateSize(),250);
+})();
+{% endif %}
+</script>
+{% endblock %}
+

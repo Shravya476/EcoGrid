@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Location | EcoGrid{% endblock %}
+{% block content %}
+<div class="option1-dashboard location-page">
+  <section class="option1-heading">
+    <div><div class="option1-welcome-small">LOCATION</div><h1>Location Settings</h1><p>All EcoGrid location controls live here. Solar Generation uses this saved location automatically.</p></div>
+    <div class="option1-date">{{ saved_location.name if saved_location else 'No location saved' }}<small>{{ 'Current forecast location' if saved_location else 'Choose a location below' }}</small></div>
+  </section>
+
+  <section class="design6-location-hero">
+    <div><span class="design6-eyebrow">CURRENT FORECAST AREA</span><h2>{{ saved_location.name if saved_location else 'My Live Location' }}</h2><p>The exact latitude/longitude is used for weather and solar calculations. The name shown here is a familiar main-area label.</p></div>
+    <div class="design6-location-badge">📍<b>{{ 'Location saved' if saved_location else 'No location saved' }}</b><small>{{ 'Coordinates: %.6f, %.6f'|format(saved_location.lat, saved_location.lon) if saved_location else 'Waiting for your choice' }}</small></div>
+  </section>
+
+  <section class="option1-location-box location-settings-card">
+    <div class="option1-section-title"><span>1 · SEARCH LOCATION</span><b>Choose a forecast area</b></div>
+    <p class="option1-location-helper">Search for a city, town, village or area. Select a result, then save it. This is the only place where manual location selection is available.</p>
+    <form id="locationForm" method="post" action="{{ url_for('save_location') }}" class="option1-location-form">
+      <input type="hidden" name="lat" id="locationLat">
+      <input type="hidden" name="lon" id="locationLon">
+      <input type="hidden" name="name" id="locationName">
+      <input type="hidden" name="next" value="location">
+      <input id="locationSearch" placeholder="Search city, town, village or area..." autocomplete="off">
+      <button type="button" id="locationSearchBtn" class="option1-secondary">Search</button>
+      <button type="submit" class="option1-save-btn">✓ Save location</button>
+    </form>
+    <div id="locationResults" class="option1-results"></div>
+    <div id="locationMsg" class="option1-location-msg" aria-live="polite"></div>
+  </section>
+
+  <section class="option1-panel live-location-card">
+    <div class="panel-title"><div><small>DEVICE LOCATION</small><h2>Use my current location</h2></div><span class="live-pill">● GPS</span></div>
+    <p class="option1-location-helper">Get a fresh browser location reading and use it as the forecast location. EcoGrid does not replace the coordinates with a nearby saved place.</p>
+    <div class="location-action-row">
+      <button type="button" id="gpsBtn" class="location-primary">📍 Use my current location</button>
+      <button type="button" id="showMapBtn" class="option1-secondary">Show map</button>
+      <a id="openGoogleMaps" class="option1-secondary map-link" target="_blank" rel="noopener noreferrer" style="display:none">Open Google Maps</a>
+    </div>
+    <div id="gpsPreview" class="gps-preview" style="display:none">
+      <div class="gps-preview-head"><div><span class="selected-label">Fresh GPS position</span><h4 id="gpsAreaName">Current location</h4><p class="note" id="gpsCoordinates"></p></div><span class="accuracy-pill">GPS</span></div>
+      <div id="googleMapWrap" style="display:none;margin-top:14px"><iframe id="googleMapFrame" title="Google Maps location" width="100%" height="300" style="border:0;border-radius:14px" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></div>
+    </div>
+    <p id="gpsMsg" class="location-status" aria-live="polite"></p>
+  </section>
+
+  <section class="option1-panel manual-location-card">
+    <div class="panel-title"><div><small>PRECISE CONTROL</small><h2>Use exact coordinates</h2></div></div>
+    <p class="option1-location-helper">Optional. Enter latitude and longitude when you already know the exact map point.</p>
+    <div class="manual-fields location-manual-fields">
+      <input type="text" id="manualLat" placeholder="Latitude e.g. 12.908000">
+      <input type="text" id="manualLon" placeholder="Longitude e.g. 77.485000">
+      <button type="button" id="manualBtn" class="option1-secondary">Use coordinates</button>
+    </div>
+    <div id="manualMsg" class="option1-location-msg" aria-live="polite"></div>
+  </section>
+
+  <section class="option1-panel location-privacy-card">
+    <div class="panel-title"><div><small>HOW LOCATION WORKS</small><h2>One location for the whole app</h2></div></div>
+    <div class="location-privacy-grid">
+      <div><span>📍</span><div><b>Exact coordinates</b><small>Weather and solar calculations use the saved latitude and longitude.</small></div></div>
+      <div><span>🏙️</span><div><b>Main-area display</b><small>Small localities such as Srinivasapura/Hemmigepura can be shown as a familiar area such as Kengeri.</small></div></div>
+      <div><span>☀️</span><div><b>Solar Generation</b><small>No location search or GPS controls appear there. It simply uses this saved location.</small></div></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const searchInput=document.getElementById('locationSearch');
+const resultsBox=document.getElementById('locationResults');
+const msg=document.getElementById('locationMsg');
+const latInput=document.getElementById('locationLat');
+const lonInput=document.getElementById('locationLon');
+const nameInput=document.getElementById('locationName');
+const gpsMsg=document.getElementById('gpsMsg');
+const gpsPreview=document.getElementById('gpsPreview');
+let selectedLat=null, selectedLon=null, selectedName='';
+
+function selectLocation(lat,lon,name){
+  selectedLat=Number(lat); selectedLon=Number(lon); selectedName=name||'Chosen location';
+  latInput.value=selectedLat; lonInput.value=selectedLon; nameInput.value=selectedName;
+  searchInput.value=selectedName;
+  resultsBox.innerHTML='<div class="home-selected">✓ Selected: <b>'+selectedName+'</b>. Press <b>Save location</b> to make it the EcoGrid forecast location.</div>';
+  msg.textContent='';
+}
+
+async function searchLocation(){
+  const q=searchInput.value.trim();
+  if(q.length<3){msg.textContent='Enter at least 3 letters.';return;}
+  msg.textContent='Searching...'; resultsBox.innerHTML='';
+  try{
+    const r=await fetch('{{ url_for("api_geocode") }}?q='+encodeURIComponent(q));
+    const data=await r.json();
+    const places=data.places||[];
+    if(!data.ok||!places.length){msg.textContent=data.message||'No matching place found.';return;}
+    msg.textContent='Choose a result:';
+    places.forEach(p=>{
+      const b=document.createElement('button'); b.type='button'; b.className='option1-place';
+      b.innerHTML='<span>⌖</span><span><b>'+p.name+'</b><small>'+(p.region||'')+(p.country?', '+p.country:'')+'</small></span>';
+      b.onclick=()=>selectLocation(p.lat,p.lon,p.name+(p.country?', '+p.country:''));
+      resultsBox.appendChild(b);
+    });
+  }catch(e){msg.textContent='Could not search right now.';}
+}
+
+document.getElementById('locationSearchBtn').onclick=searchLocation;
+searchInput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchLocation();}});
+
+document.getElementById('gpsBtn').onclick=async()=>{
+  gpsMsg.textContent='Getting a fresh current location...';
+  if(!window.isSecureContext && location.hostname!=='localhost' && location.hostname!=='127.0.0.1'){
+    gpsMsg.textContent='Location needs HTTPS. Open the deployed EcoGrid website using its https:// address.'; return;
+  }
+  if(!navigator.geolocation){gpsMsg.textContent='This browser does not support location.';return;}
+  try{
+    if(navigator.permissions){
+      const perm=await navigator.permissions.query({name:'geolocation'});
+      if(perm.state==='denied'){gpsMsg.textContent='Location is blocked for EcoGrid. Allow Location in Chrome site settings, then try again.';return;}
+    }
+  }catch(e){}
+  navigator.geolocation.getCurrentPosition(async position=>{
+    const lat=position.coords.latitude, lon=position.coords.longitude;
+    const accuracy=Math.round(position.coords.accuracy||0);
+    gpsMsg.textContent='Fresh GPS position received (about '+accuracy+' m accuracy). Looking up the main area...';
+    let name='Current phone location';
+    try{
+      const r=await (await fetch('{{ url_for("api_reverse_geocode") }}?lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lon))).json();
+      if(r.ok&&r.name) name=r.name;
+    }catch(e){}
+    selectLocation(lat.toFixed(6),lon.toFixed(6),name);
+    document.getElementById('gpsAreaName').textContent=name;
+    document.getElementById('gpsCoordinates').textContent='Latitude '+lat.toFixed(6)+' · Longitude '+lon.toFixed(6)+' · Accuracy about '+accuracy+' m';
+    gpsPreview.style.display='block';
+    gpsMsg.innerHTML='<b>Current location ready.</b> Press <b>Save location</b> above to use it across EcoGrid.';
+    const maps='https://www.google.com/maps?q='+encodeURIComponent(lat)+','+encodeURIComponent(lon);
+    const mapsLink=document.getElementById('openGoogleMaps'); mapsLink.href=maps; mapsLink.style.display='inline-flex';
+    document.getElementById('showMapBtn').onclick=()=>{
+      const wrap=document.getElementById('googleMapWrap'); const frame=document.getElementById('googleMapFrame');
+      frame.src='https://www.google.com/maps?q='+encodeURIComponent(lat)+','+encodeURIComponent(lon)+'&output=embed';
+      wrap.style.display=wrap.style.display==='none'?'block':'none';
+    };
+  },err=>{
+    if(err.code===1) gpsMsg.textContent='Location permission was denied. Allow Location for EcoGrid in Chrome site settings.';
+    else if(err.code===2) gpsMsg.textContent='Could not get a location fix. Turn ON phone Location/GPS and keep Wi-Fi/mobile data ON.';
+    else gpsMsg.textContent='Location request timed out. Keep Location/GPS ON and try again.';
+  },{enableHighAccuracy:true,timeout:30000,maximumAge:0});
+};
+
+document.getElementById('manualBtn').onclick=()=>{
+  const lat=parseFloat(document.getElementById('manualLat').value), lon=parseFloat(document.getElementById('manualLon').value);
+  if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<-90||lat>90||lon<-180||lon>180){document.getElementById('manualMsg').textContent='Enter valid latitude and longitude.';return;}
+  selectLocation(lat.toFixed(6),lon.toFixed(6),'Entered coordinates');
+  document.getElementById('manualMsg').innerHTML='<b>Coordinates selected.</b> Press <b>Save location</b> above.';
+};
+</script>
+<style>
+.design6-location-hero{display:flex;justify-content:space-between;gap:28px;align-items:center;margin:18px 0 22px;padding:30px;border-radius:24px;min-height:150px;background:linear-gradient(90deg,rgba(5,34,46,.86),rgba(8,57,58,.60) 58%,rgba(8,57,58,.24)),url("/static/solar_home_hero.png") center 58%/cover no-repeat;color:#fff;box-shadow:0 16px 40px rgba(20,80,50,.14)}
+.design6-location-hero h2{margin:8px 0 8px;font-size:32px}.design6-location-hero p{margin:0;max-width:720px;color:rgba(255,255,255,.84);line-height:1.6}.design6-location-badge{min-width:250px;padding:20px;border-radius:18px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);display:flex;flex-direction:column;gap:6px}.design6-location-badge:first-letter{font-size:25px}.design6-location-badge small{color:rgba(255,255,255,.8)}
+.location-settings-card{margin-top:0}.live-location-card,.manual-location-card,.location-privacy-card{margin-top:22px}.location-action-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.map-link{text-decoration:none}.gps-preview{margin-top:16px;padding:18px;border:1px solid #dcebe1;border-radius:16px;background:#fbfdfb}.gps-preview-head{display:flex;justify-content:space-between;gap:15px;align-items:flex-start}.gps-preview h4{margin:5px 0}.selected-label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#64748b}.accuracy-pill{border-radius:999px;padding:6px 10px;background:#e8f5eb;color:#23613a;font-size:12px;font-weight:700}.location-manual-fields{display:flex;gap:10px;flex-wrap:wrap}.location-manual-fields input{flex:1;min-width:180px}.location-privacy-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.location-privacy-grid>div{display:flex;gap:12px;align-items:flex-start;padding:18px;border:1px solid #e6eee8;border-radius:16px;background:#fbfdfb}.location-privacy-grid span{font-size:22px}.location-privacy-grid b{display:block;margin-bottom:4px}.location-privacy-grid small{display:block;color:#64748b;line-height:1.45}@media(max-width:850px){.design6-location-hero{flex-direction:column;align-items:flex-start}.design6-location-badge{width:100%;box-sizing:border-box}.location-privacy-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
