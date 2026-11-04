@@ -8,3 +8,4 @@ satpy
 pyresample
 boto3
 python-dotenv
+gunicorn
