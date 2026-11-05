@@ -1,39 +1,225 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#f6fbf7" id="themeColor"><meta name="description" content="EcoGrid — clean energy intelligence.">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f6fbf7" id="themeColor">
+<meta name="description" content="EcoGrid — clean energy intelligence.">
+
 <title>{% block title %}EcoGrid | Clean Energy Intelligence{% endblock %}</title>
+
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
 <script>
-(function(){try{var t=localStorage.getItem('ecogrid-theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();
-</script></head>
+(function(){
+    try {
+        var t = localStorage.getItem('ecogrid-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', t);
+    } catch(e) {
+        document.documentElement.setAttribute('data-theme', 'light');
+    }
+})();
+</script>
+</head>
+
 <body>
+
 {% if session.user %}
+
 <div class="option1-shell">
-  <aside class="option1-sidebar">
-    <div class="option1-brand"><img class="ecogrid-logo" src="{{ url_for('static', filename='ecogrid_logo.png') }}" alt="EcoGrid logo"><div><strong>EcoGrid</strong><small>Solar Intelligence</small></div></div>
-    <nav class="option1-nav">
-      <a class="option1-nav-item {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}"><span>⌂</span>Home</a>
-      <a class="option1-nav-item {% if request.endpoint == 'location' %}active{% endif %}" href="{{ url_for('location') }}"><span>⌖</span>Location</a>
-      <a class="option1-nav-item {% if request.endpoint == 'generation' %}active{% endif %}" href="{{ url_for('generation') }}"><span>☀</span>Solar Generation</a>
-      <a class="option1-nav-item {% if request.endpoint == 'consumption' %}active{% endif %}" href="{{ url_for('consumption') }}"><span>⌂</span>Consumption</a>
-      <a class="option1-nav-item" href="{{ url_for('home') }}#weather-section"><span>☁</span>Weather</a>
-    </nav>
-    <div class="option1-sidebar-bottom">
-      <div class="option1-theme-row"><span>Theme</span><div class="option1-theme-buttons"><button type="button" data-theme-choice="light" onclick="setEcoGridTheme('light')">☀</button><button type="button" data-theme-choice="dark" onclick="setEcoGridTheme('dark')">☾</button></div></div>
-    </div>
-  </aside>
-  <main class="option1-main">
-    <header class="option1-topbar">
-      <div></div><div class="option1-top-actions"><button class="icon-btn" type="button" aria-label="Notifications">♧</button><details class="top-profile-menu"><summary class="profile-pill"><span>{{ session.user[:1]|upper }}</span>{{ session.user }}<b>⌄</b></summary><div class="top-profile-dropdown"><div><strong>{{ session.user }}</strong><small>Signed in</small></div><a href="{{ url_for('logout') }}">↪ Logout</a></div></details></div>
-    </header>
+
+    <aside class="option1-sidebar">
+
+        <div class="option1-brand">
+            <img class="ecogrid-logo"
+                 src="{{ url_for('static', filename='ecogrid_logo.png') }}"
+                 alt="EcoGrid logo">
+            <div>
+                <strong>EcoGrid</strong>
+                <small>Solar Intelligence</small>
+            </div>
+        </div>
+
+        <nav class="option1-nav">
+
+            <a class="option1-nav-item {% if request.endpoint == 'home' %}active{% endif %}"
+               href="{{ url_for('home') }}">
+                <span>⌂</span>Home
+            </a>
+
+            <a class="option1-nav-item {% if request.endpoint == 'location' %}active{% endif %}"
+               href="{{ url_for('location') }}">
+                <span>⌖</span>Location
+            </a>
+
+            <a class="option1-nav-item {% if request.endpoint == 'generation' %}active{% endif %}"
+               href="{{ url_for('generation') }}">
+                <span>☀</span>Solar Generation
+            </a>
+
+            <a class="option1-nav-item {% if request.endpoint == 'consumption' %}active{% endif %}"
+               href="{{ url_for('consumption') }}">
+                <span>⌂</span>Consumption
+            </a>
+
+            <a class="option1-nav-item {% if request.endpoint == 'cloud_monitoring' %}active{% endif %}"
+               href="{{ url_for('cloud_monitoring') }}">
+                <span>☁</span>Cloud Monitoring
+            </a>
+
+            <a class="option1-nav-item"
+               href="{{ url_for('home') }}#weather-section">
+                <span>☁</span>Weather
+            </a>
+
+        </nav>
+
+        <div class="option1-sidebar-bottom">
+
+            <div class="option1-theme-row">
+                <span>Theme</span>
+
+                <div class="option1-theme-buttons">
+                    <button type="button"
+                            data-theme-choice="light"
+                            onclick="setEcoGridTheme('light')">☀</button>
+
+                    <button type="button"
+                            data-theme-choice="dark"
+                            onclick="setEcoGridTheme('dark')">☾</button>
+                </div>
+            </div>
+
+        </div>
+
+    </aside>
+
+    <main class="option1-main">
+
+        <header class="option1-topbar">
+
+            <div></div>
+
+            <div class="option1-top-actions">
+
+                <button class="icon-btn"
+                        type="button"
+                        aria-label="Notifications">♧</button>
+
+                <details class="top-profile-menu">
+
+                    <summary class="profile-pill">
+                        <span>{{ session.user[:1]|upper }}</span>
+                        {{ session.user }}
+                        <b>⌄</b>
+                    </summary>
+
+                    <div class="top-profile-dropdown">
+
+                        <div>
+                            <strong>{{ session.user }}</strong>
+                            <small>Signed in</small>
+                        </div>
+
+                        <a href="{{ url_for('logout') }}">↪ Logout</a>
+
+                    </div>
+
+                </details>
+
+            </div>
+
+        </header>
+
 {% else %}
-<nav class="auth-nav"><span class="brand"><img class="auth-brand-logo" src="{{ url_for('static', filename='ecogrid_logo.png') }}" alt="EcoGrid logo"><span>EcoGrid <em>AI</em><small>Solar Energy Intelligence</small></span></span><div class="theme-switch"><button type="button" onclick="setEcoGridTheme('light')">☀ Light</button><button type="button" onclick="setEcoGridTheme('dark')">☾ Dark</button></div></nav>
+
+<nav class="auth-nav">
+
+    <span class="brand">
+
+        <img class="auth-brand-logo"
+             src="{{ url_for('static', filename='ecogrid_logo.png') }}"
+             alt="EcoGrid logo">
+
+        <span>
+            EcoGrid <em>AI</em>
+            <small>Solar Energy Intelligence</small>
+        </span>
+
+    </span>
+
+    <div class="theme-switch">
+
+        <button type="button"
+                onclick="setEcoGridTheme('light')">☀ Light</button>
+
+        <button type="button"
+                onclick="setEcoGridTheme('dark')">☾ Dark</button>
+
+    </div>
+
+</nav>
+
 <main>
+
 {% endif %}
-{% with messages = get_flashed_messages(with_categories=true) %}{% for cat, msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}{% endwith %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+
+    {% for cat, msg in messages %}
+
+        <div class="flash {{ cat }}">{{ msg }}</div>
+
+    {% endfor %}
+
+{% endwith %}
+
 {% block content %}{% endblock %}
-{% if session.user %}</main></div>{% endif %}
+
+{% if session.user %}
+    </main>
+</div>
+{% endif %}
+
 <script>
-function setEcoGridTheme(theme){document.documentElement.setAttribute('data-theme',theme);try{localStorage.setItem('ecogrid-theme',theme);}catch(e){}var m=document.getElementById('themeColor');if(m)m.setAttribute('content',theme==='dark'?'#061A2A':'#F5FAFE');document.querySelectorAll('[data-theme-choice]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-theme-choice')===theme);});}
-document.addEventListener('DOMContentLoaded',function(){setEcoGridTheme(document.documentElement.getAttribute('data-theme')||'light');});
-</script></body></html>
+
+function setEcoGridTheme(theme) {
+
+    document.documentElement.setAttribute('data-theme', theme);
+
+    try {
+        localStorage.setItem('ecogrid-theme', theme);
+    } catch(e) {}
+
+    var m = document.getElementById('themeColor');
+
+    if (m) {
+        m.setAttribute(
+            'content',
+            theme === 'dark' ? '#061A2A' : '#F5FAFE'
+        );
+    }
+
+    document.querySelectorAll('[data-theme-choice]').forEach(function(b) {
+
+        b.classList.toggle(
+            'active',
+            b.getAttribute('data-theme-choice') === theme
+        );
+
+    });
+
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    setEcoGridTheme(
+        document.documentElement.getAttribute('data-theme') || 'light'
+    );
+
+});
+
+</script>
+
+</body>
+</html>
