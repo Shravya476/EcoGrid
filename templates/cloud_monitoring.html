@@ -1,287 +1,168 @@
 
 {% extends "base.html" %}
 
-{% block title %}Cloud Monitoring | EcoGrid{% endblock %}
-
 {% block content %}
 
 <style>
-.cloud-page {
-    padding: 26px;
-    max-width: 1200px;
-    margin: auto;
-}
-
-.cloud-heading {
-    margin-bottom: 24px;
-}
-
-.cloud-heading h1 {
-    margin-bottom: 8px;
-}
-
-.cloud-heading p {
-    opacity: 0.75;
-    line-height: 1.6;
-}
-
-.cloud-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px;
-    margin-bottom: 20px;
-}
-
-.cloud-card {
-    padding: 22px;
-    border-radius: 16px;
-    background: var(--surface, rgba(128,128,128,0.08));
-    border: 1px solid var(--border, rgba(128,128,128,0.2));
-    margin-bottom: 20px;
-}
-
-.cloud-card h2,
-.cloud-card h3 {
-    margin-top: 0;
-}
-
-.cloud-location {
-    font-size: 18px;
-    font-weight: 600;
-}
-
-.cloud-muted {
-    opacity: 0.72;
-    font-size: 13px;
-    line-height: 1.6;
-}
-
-.cloud-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 18px;
-}
-
-.cloud-actions button {
-    padding: 11px 18px;
-    border: 0;
-    border-radius: 9px;
-    cursor: pointer;
-    font-weight: 600;
-}
-
-.cloud-primary {
-    background: var(--primary, #16865a);
-    color: white;
-}
-
-.cloud-secondary {
-    background: var(--surface, #e8efea);
-    color: var(--text, #183329);
-    border: 1px solid var(--border, #ccd8d0) !important;
-}
-
-.cloud-actions button:disabled {
-    opacity: 0.55;
-    cursor: wait;
-}
-
-.cloud-status {
-    padding: 13px;
-    border-radius: 10px;
-    margin-top: 18px;
-    background: var(--surface, rgba(128,128,128,0.08));
-    line-height: 1.5;
-    overflow-wrap: anywhere;
-}
-
-.cloud-status.error {
-    border-left: 4px solid #d9534f;
-}
-
-.cloud-status.success {
-    border-left: 4px solid #269b69;
-}
-
-.cloud-status.loading {
-    border-left: 4px solid #d69b36;
-}
-
-.cloud-data {
-    overflow-x: auto;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    font-size: 13px;
-    line-height: 1.6;
-    padding: 16px;
-    border-radius: 10px;
-    background: var(--surface, rgba(128,128,128,0.08));
-    border: 1px solid var(--border, rgba(128,128,128,0.2));
-}
-
-.cloud-result-label {
-    font-weight: 600;
-    margin-bottom: 10px;
-}
-
-.cloud-metric-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
-    margin: 16px 0;
-}
-
-.cloud-metric {
-    padding: 15px;
-    border-radius: 12px;
-    background: var(--surface, rgba(128,128,128,0.08));
-    border: 1px solid var(--border, rgba(128,128,128,0.2));
-}
-
-.cloud-metric strong {
-    display: block;
-    font-size: 21px;
-    margin-top: 7px;
-}
-
-.cloud-image {
-    display: block;
-    max-width: 100%;
-    height: auto;
-    border-radius: 12px;
-    margin-top: 15px;
-}
-
-@media (max-width: 700px) {
     .cloud-page {
-        padding: 15px;
+        max-width: 1100px;
+        margin: 25px auto;
+        padding: 20px;
     }
 
-    .cloud-grid {
-        grid-template-columns: 1fr;
+    .cloud-heading {
+        margin-bottom: 22px;
     }
-}
+
+    .cloud-heading h1 {
+        font-size: 28px;
+        margin-bottom: 8px;
+    }
+
+    .cloud-heading p {
+        color: var(--text-muted, #888);
+        margin: 0;
+    }
+
+    .cloud-location {
+        padding: 15px 18px;
+        border-radius: 12px;
+        background: var(--card-bg, #f5f5f5);
+        margin-bottom: 20px;
+    }
+
+    .cloud-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+
+    .cloud-button {
+        border: none;
+        padding: 12px 20px;
+        border-radius: 9px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        background: var(--primary, #16845b);
+        color: white;
+    }
+
+    .cloud-button.secondary {
+        background: #526477;
+    }
+
+    .cloud-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .cloud-status {
+        padding: 12px;
+        border-radius: 9px;
+        margin: 15px 0;
+        display: none;
+        overflow-wrap: anywhere;
+    }
+
+    .cloud-status.loading {
+        display: block;
+        background: #e8f2ff;
+        color: #174b80;
+    }
+
+    .cloud-status.error {
+        display: block;
+        background: #ffe9e9;
+        color: #a32020;
+    }
+
+    .cloud-results {
+        margin-top: 22px;
+        text-align: center;
+    }
+
+    .cloud-percentage {
+        display: inline-block;
+        padding: 15px 25px;
+        margin-bottom: 18px;
+        border-radius: 12px;
+        background: var(--card-bg, #f5f5f5);
+        font-size: 25px;
+        font-weight: 700;
+    }
+
+    .cloud-image {
+        width: 100%;
+        max-width: 850px;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+        border-radius: 14px;
+        border: 1px solid rgba(128,128,128,0.25);
+    }
+
+    @media (max-width: 600px) {
+        .cloud-page {
+            padding: 12px;
+        }
+
+        .cloud-heading h1 {
+            font-size: 23px;
+        }
+
+        .cloud-percentage {
+            font-size: 21px;
+        }
+    }
 </style>
 
 <div class="cloud-page">
 
     <div class="cloud-heading">
-        <h1>☁ Cloud Monitoring</h1>
-        <p>
-            Monitor available satellite cloud information for your saved
-            solar plant location. Understand how cloud conditions may
-            influence sunlight availability and solar generation.
-        </p>
+        <h1>Cloud Monitoring</h1>
+        <p>View satellite imagery and the estimated cloud-covered area.</p>
     </div>
 
-    <div class="cloud-grid">
+    <div class="cloud-location">
+        <strong>Monitoring Location:</strong>
+        {{ loc.name }}
 
-        <section class="cloud-card">
-            <h3>📍 Saved Plant Location</h3>
+        <br>
 
-            <div class="cloud-location">
-                {{ loc.name }}
-            </div>
-
-            <p class="cloud-muted">
-                Latitude: {{ loc.lat }}<br>
-                Longitude: {{ loc.lon }}
-            </p>
-        </section>
-
-        <section class="cloud-card">
-            <h3>🛰 Satellite Coverage</h3>
-
-            <div id="coverageInfo" class="cloud-muted">
-                {% if coverage is defined %}
-                    {{ coverage | tojson(indent=2) }}
-                {% else %}
-                    Coverage information is not available.
-                {% endif %}
-            </div>
-        </section>
-
+        <small>
+            Latitude: {{ loc.lat }} |
+            Longitude: {{ loc.lon }}
+        </small>
     </div>
 
-    <section class="cloud-card">
+    <div class="cloud-actions">
+        <button
+            type="button"
+            class="cloud-button"
+            id="cloudCheckBtn"
+            onclick="checkClouds(false)">
+            Check Clouds Now
+        </button>
 
-        <h2>Live Cloud Outlook</h2>
+        <button
+            type="button"
+            class="cloud-button secondary"
+            id="cloudDemoBtn"
+            onclick="checkClouds(true)">
+            Load Demo Image
+        </button>
+    </div>
 
-        <p class="cloud-muted">
-            Check the available cloud information for your saved location.
-            Results depend on satellite data availability and the
-            cloud monitoring service.
-        </p>
+    <div id="cloudStatus" class="cloud-status"></div>
 
-        <div class="cloud-actions">
-
-            <button type="button"
-                    class="cloud-primary"
-                    id="cloudCheckBtn"
-                    onclick="checkClouds(false)">
-                Check Clouds Now
-            </button>
-
-            <button type="button"
-                    class="cloud-secondary"
-                    id="cloudDemoBtn"
-                    onclick="checkClouds(true)">
-                Demo with Recent Satellite Images
-            </button>
-
-        </div>
-
-        <div id="cloudStatus"
-             class="cloud-status"
-             aria-live="polite">
-            Ready to check cloud conditions.
-        </div>
-
-    </section>
-
-    <section class="cloud-card">
-
-        <h2>Cloud Monitoring Results</h2>
-
-        <p class="cloud-muted">
-            The latest response from the cloud monitoring service
-            will appear below.
-        </p>
-
-        <div id="cloudResults">
-            <p class="cloud-muted">
-                Select "Check Clouds Now" to retrieve available information.
-            </p>
-        </div>
-
-    </section>
-
-    <section class="cloud-card">
-
-        <h3>How Cloud Monitoring Helps</h3>
-
-        <ul>
-            <li>Provides additional information about cloud conditions.</li>
-            <li>Helps users understand possible changes in sunlight availability.</li>
-            <li>Supports interpretation of solar generation forecasts.</li>
-            <li>Displays satellite service availability for the selected location.</li>
-        </ul>
-
-        <p class="cloud-muted">
-            Important: Satellite coverage and cloud prediction depend on
-            available satellite data and trained models. EcoGrid does not
-            guarantee real-time satellite coverage or cloud-arrival warnings
-            at every location.
-        </p>
-
-    </section>
+    <div id="cloudResults" class="cloud-results"></div>
 
 </div>
 
-
 <script>
-async function checkClouds(demo) {
+async function checkClouds(demo = false) {
 
     const status = document.getElementById("cloudStatus");
     const results = document.getElementById("cloudResults");
@@ -292,10 +173,11 @@ async function checkClouds(demo) {
     normalBtn.disabled = true;
     demoBtn.disabled = true;
 
-    status.textContent = "Fetching satellite cloud image...";
-    status.className = "cloud-status loading";
-
     results.replaceChildren();
+
+    status.style.display = "block";
+    status.className = "cloud-status loading";
+    status.textContent = "Fetching satellite cloud image. Please wait...";
 
     try {
 
@@ -314,66 +196,100 @@ async function checkClouds(demo) {
             cache: "no-store"
         });
 
-        const data = await response.json();
+        // Read the response as text first.
+        // This prevents JSON parsing errors when Flask returns HTML.
+        const responseText = await response.text();
 
-        if (!response.ok || data.ok === false) {
+        let data;
+
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+
+            if (
+                response.redirected ||
+                response.url.includes("/login")
+            ) {
+                throw new Error(
+                    "Your login session may have expired. Please log in again."
+                );
+            }
+
+            console.error(
+                "Server returned HTML instead of JSON:",
+                responseText
+            );
+
             throw new Error(
-                data.message || "Cloud information unavailable."
+                "The cloud API returned an HTML page instead of JSON. HTTP status: " +
+                response.status +
+                ". Please check the Render logs."
             );
         }
 
-        // Display only the latest cloudy percentage.
+        if (!response.ok || data.ok === false) {
+            throw new Error(
+                data.message || "Unable to retrieve cloud information."
+            );
+        }
+
+        // Get the latest cloudy percentage.
         const percentages = data.cloud_share;
 
-        if (!Array.isArray(percentages) || percentages.length === 0) {
+        if (
+            !Array.isArray(percentages) ||
+            percentages.length === 0
+        ) {
             throw new Error("Cloud percentage is unavailable.");
         }
 
         const latestPercentage =
             percentages[percentages.length - 1];
 
+        // Check satellite image.
+        if (!data.image) {
+            throw new Error("Satellite image is unavailable.");
+        }
+
+        // Display cloudy percentage.
         const percentageBox = document.createElement("div");
 
-        percentageBox.style.fontSize = "25px";
-        percentageBox.style.fontWeight = "700";
-        percentageBox.style.margin = "20px 0";
-        percentageBox.style.textAlign = "center";
+        percentageBox.className = "cloud-percentage";
 
         percentageBox.textContent =
             "☁ Cloudy Area: " + latestPercentage + "%";
 
         results.appendChild(percentageBox);
 
-        // Display only the satellite image.
-        if (data.image) {
+        // Display actual satellite image.
+        const image = document.createElement("img");
 
-            const image = document.createElement("img");
+        image.className = "cloud-image";
 
-            image.src = data.image.startsWith("data:image/")
-                ? data.image
-                : "data:image/png;base64," + data.image;
+        image.alt = "Satellite image showing cloud conditions";
 
-            image.alt = "Satellite Cloud Image";
+        image.src = data.image.startsWith("data:image/")
+            ? data.image
+            : "data:image/png;base64," + data.image;
 
-            image.style.width = "100%";
-            image.style.maxWidth = "850px";
-            image.style.height = "auto";
-            image.style.display = "block";
-            image.style.margin = "15px auto";
-            image.style.borderRadius = "14px";
+        image.onerror = function () {
+            image.remove();
 
-            results.appendChild(image);
+            status.style.display = "block";
+            status.className = "cloud-status error";
+            status.textContent =
+                "The satellite image could not be displayed.";
+        };
 
-        } else {
-            throw new Error("Satellite image is unavailable.");
-        }
+        results.appendChild(image);
 
+        // Hide status after successful display.
         status.textContent = "";
         status.style.display = "none";
 
     } catch (error) {
 
-        console.error("Cloud monitoring error:", error);
+        console.error("Cloud Monitoring Error:", error);
 
         status.style.display = "block";
         status.className = "cloud-status error";
@@ -387,15 +303,5 @@ async function checkClouds(demo) {
     }
 }
 </script>
-
-
-     
-            
-
-        
-
-            
-
-       
 
 {% endblock %}
