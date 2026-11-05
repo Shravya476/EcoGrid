@@ -1,5 +1,5 @@
 """EcoGrid AI - solar generation and energy consumption forecasting app (Flask)."""
-import os, io, json, base64, sqlite3, urllib.request, urllib.parse, re, secrets, hashlib, smtplib
+import os, io, json, base64, sqlite3, urllib.request, urllib.parse, re, secrets, hashlib, smtplib, time, threading
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from functools import wraps
@@ -25,6 +25,15 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "ecogrid-fresh-session-2026-10-27")
 # New cookie name intentionally invalidates any old browser login session from earlier builds.
 app.config["SESSION_COOKIE_NAME"] = "ecogrid_session_v2"
+
+# ---------------- Weather forecast cache ----------------
+# Cache successful Open-Meteo responses for 10 minutes. If the service
+# temporarily fails (including HTTP 429), reuse the last response for up to 6 hours.
+_WEATHER_CACHE = {}
+_WEATHER_CACHE_LOCK = threading.Lock()
+_WEATHER_CACHE_TTL = 600
+_WEATHER_CACHE_STALE_TTL = 21600
+
 
 # ---------------- Settings ----------------
 REF_LAT, REF_LON = -23.76, 133.87         # approximate location of the reference solar plant (Alice Springs)
@@ -224,21 +233,22 @@ def hours_of(day):
 
 
 def fetch_weather_forecast(lat, lon):
-    """Fetch current + hourly 3-day weather forecast in the location's local timezone.
-    The generation engine uses forecast radiation/weather directly; it does not require
-    historical generation from the user's plant."""
+    """Fetch a forecast with caching and a stale-data fallback for rate limits."""
+    cache_key = (round(float(lat), 3), round(float(lon), 3))
+    now = time.time()
+    with _WEATHER_CACHE_LOCK:
+        cached = _WEATHER_CACHE.get(cache_key)
+        if cached and now - cached["saved_at"] <= _WEATHER_CACHE_TTL:
+            old = cached["result"]
+            return old[0].copy(), old[1], dict(old[2])
+
     hourly_fields = (
         "temperature_2m,relative_humidity_2m,wind_speed_10m,cloud_cover,"
         "shortwave_radiation,direct_normal_irradiance,diffuse_radiation,precipitation"
     )
-    # Use Open-Meteo Best Match for the closest suitable model for the exact
-    # location. This is preferable to forcing one global model in a local
-    # weather screen, because Best Match can select higher-resolution models
-    # where they are available. It remains completely free and needs no key.
     base_params = {
         "latitude": lat, "longitude": lon, "timezone": "auto", "forecast_days": 3,
-        "cell_selection": "nearest",
-        "temperature_unit": "celsius",
+        "cell_selection": "nearest", "temperature_unit": "celsius",
         "wind_speed_unit": "kmh",
         "current": "temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,cloud_cover,precipitation,weather_code,shortwave_radiation",
         "hourly": hourly_fields + ",weather_code",
@@ -249,11 +259,13 @@ def fetch_weather_forecast(lat, lon):
         with urllib.request.urlopen("https://api.open-meteo.com/v1/forecast?" + params, timeout=20) as r:
             data = json.load(r)
     except Exception:
-        # Keep the app usable if the primary forecast endpoint is temporarily
-        # unavailable by retrying the same free Best Match request.
-        params = urllib.parse.urlencode(base_params)
-        with urllib.request.urlopen("https://api.open-meteo.com/v1/forecast?" + params, timeout=20) as r:
-            data = json.load(r)
+        with _WEATHER_CACHE_LOCK:
+            cached = _WEATHER_CACHE.get(cache_key)
+            if cached and time.time() - cached["saved_at"] <= _WEATHER_CACHE_STALE_TTL:
+                old = cached["result"]
+                return old[0].copy(), old[1], dict(old[2])
+        raise
+
     h = data["hourly"]
     idx = pd.to_datetime(h["time"])
     df = pd.DataFrame({
@@ -296,7 +308,10 @@ def fetch_weather_forecast(lat, lon):
     current["hourly_precipitation"] = [float(x) for x in h["precipitation"]]
     current["hourly_weather_code"] = [int(x) for x in h.get("weather_code", [0] * len(h["time"]))]
     current["daily"] = daily_out
-    return df, int(data.get("utc_offset_seconds", 0)), current
+    result = (df, int(data.get("utc_offset_seconds", 0)), current)
+    with _WEATHER_CACHE_LOCK:
+        _WEATHER_CACHE[cache_key] = {"saved_at": time.time(), "result": result}
+    return df.copy(), result[1], dict(current)
 
 
 def search_places(query):
@@ -1257,6 +1272,15 @@ def api_history():
             FROM forecast_history WHERE username=? ORDER BY id DESC LIMIT ?""",
             (session["user"], limit)).fetchall()
     return jsonify({"ok": True, "records": [dict(r) for r in rows]})
+
+
+@app.route("/cloud-monitoring")
+@login_required
+def cloud_monitoring():
+    loc = current_loc()
+    session["loc"] = loc
+    coverage = cloud_live.coverage(loc["lat"], loc["lon"])
+    return render_template("cloud_monitoring.html", loc=loc, coverage=coverage)
 
 
 @app.route("/api/cloud")
