@@ -1,63 +1,229 @@
+
 {% extends "base.html" %}
 
 {% block title %}Cloud Monitoring | EcoGrid{% endblock %}
 
 {% block content %}
 
-<div class="page-container" style="padding:25px;">
+<style>
+.cloud-page {
+    padding: 26px;
+    max-width: 1200px;
+    margin: auto;
+}
 
-    <div style="margin-bottom:25px;">
+.cloud-heading {
+    margin-bottom: 24px;
+}
 
-        <h1>Cloud Monitoring</h1>
+.cloud-heading h1 {
+    margin-bottom: 8px;
+}
+
+.cloud-heading p {
+    opacity: 0.75;
+    line-height: 1.6;
+}
+
+.cloud-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.cloud-card {
+    padding: 22px;
+    border-radius: 16px;
+    background: var(--surface, rgba(128,128,128,0.08));
+    border: 1px solid var(--border, rgba(128,128,128,0.2));
+    margin-bottom: 20px;
+}
+
+.cloud-card h2,
+.cloud-card h3 {
+    margin-top: 0;
+}
+
+.cloud-location {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.cloud-muted {
+    opacity: 0.72;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.cloud-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.cloud-actions button {
+    padding: 11px 18px;
+    border: 0;
+    border-radius: 9px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.cloud-primary {
+    background: var(--primary, #16865a);
+    color: white;
+}
+
+.cloud-secondary {
+    background: var(--surface, #e8efea);
+    color: var(--text, #183329);
+    border: 1px solid var(--border, #ccd8d0) !important;
+}
+
+.cloud-actions button:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+.cloud-status {
+    padding: 13px;
+    border-radius: 10px;
+    margin-top: 18px;
+    background: var(--surface, rgba(128,128,128,0.08));
+    line-height: 1.5;
+}
+
+.cloud-status.error {
+    border-left: 4px solid #d9534f;
+}
+
+.cloud-status.success {
+    border-left: 4px solid #269b69;
+}
+
+.cloud-data {
+    overflow-x: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 16px;
+    border-radius: 10px;
+    background: var(--surface, rgba(128,128,128,0.08));
+    border: 1px solid var(--border, rgba(128,128,128,0.2));
+}
+
+.cloud-result-label {
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+@media (max-width: 700px) {
+    .cloud-page {
+        padding: 15px;
+    }
+
+    .cloud-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="cloud-page">
+
+    <div class="cloud-heading">
+        <h1>☁ Cloud Monitoring</h1>
 
         <p>
-            Monitor satellite cloud information for your saved solar plant
-            location and understand how cloud conditions may affect solar generation.
+            Monitor available satellite cloud information for your saved
+            solar plant location. Understand how cloud conditions may
+            influence sunlight availability and solar generation.
         </p>
+    </div>
+
+    <div class="cloud-grid">
+
+        <section class="cloud-card">
+            <h3>📍 Saved Plant Location</h3>
+
+            <div class="cloud-location">
+                {{ loc.name }}
+            </div>
+
+            <p class="cloud-muted">
+                Latitude: {{ loc.lat }}<br>
+                Longitude: {{ loc.lon }}
+            </p>
+        </section>
+
+        <section class="cloud-card">
+            <h3>🛰 Satellite Coverage</h3>
+
+            <div id="coverageInfo" class="cloud-muted">
+                {% if coverage is defined %}
+                    {{ coverage | tojson(indent=2) }}
+                {% else %}
+                    Coverage information is not available.
+                {% endif %}
+            </div>
+        </section>
 
     </div>
 
-    <div class="option1-panel" style="padding:25px; margin-bottom:20px;">
+    <section class="cloud-card">
 
         <h2>Live Cloud Outlook</h2>
 
-        <p>
-            EcoGrid checks the available satellite cloud information
-            for your saved location.
+        <p class="cloud-muted">
+            Check the available cloud information for your saved location.
+            The result depends on satellite data availability and the
+            cloud monitoring service.
         </p>
 
-        <button type="button"
-                id="cloudCheckBtn"
-                onclick="checkClouds(false)">
-            Check Clouds Now
-        </button>
+        <div class="cloud-actions">
 
-        <button type="button"
-                id="cloudDemoBtn"
-                onclick="checkClouds(true)"
-                style="margin-left:10px;">
-            Demo with Recent Satellite Images
-        </button>
+            <button type="button"
+                    class="cloud-primary"
+                    id="cloudCheckBtn"
+                    onclick="checkClouds(false)">
+                Check Clouds Now
+            </button>
 
-        <div id="cloudStatus" style="margin-top:20px;">
+            <button type="button"
+                    class="cloud-secondary"
+                    id="cloudDemoBtn"
+                    onclick="checkClouds(true)">
+                Demo with Recent Satellite Images
+            </button>
+
+        </div>
+
+        <div id="cloudStatus" class="cloud-status" aria-live="polite">
             Ready to check cloud conditions.
         </div>
 
-    </div>
+    </section>
 
-    <div class="option1-panel" style="padding:25px;">
+    <section class="cloud-card">
 
         <h2>Cloud Monitoring Results</h2>
 
+        <p class="cloud-muted">
+            The latest response from the cloud monitoring service will
+            appear below.
+        </p>
+
         <div id="cloudResults">
-            <p>
-                Click "Check Clouds Now" to retrieve available cloud information.
+            <p class="cloud-muted">
+                Select "Check Clouds Now" to retrieve available information.
             </p>
         </div>
 
-    </div>
+    </section>
 
-    <div class="option1-panel" style="padding:25px; margin-top:20px;">
+    <section class="cloud-card">
 
         <h3>How Cloud Monitoring Helps</h3>
 
@@ -68,13 +234,14 @@
             <li>Displays satellite service availability for the selected location.</li>
         </ul>
 
-        <p style="font-size:13px; opacity:0.8;">
-            Note: Satellite coverage and cloud prediction depend on available
-            satellite data and trained models. EcoGrid does not guarantee
-            satellite coverage at every location.
+        <p class="cloud-muted">
+            Important: Satellite coverage and cloud prediction depend on
+            available satellite data and trained models. EcoGrid does not
+            guarantee real-time satellite coverage or cloud-arrival warnings
+            at every location.
         </p>
 
-    </div>
+    </section>
 
 </div>
 
@@ -84,10 +251,13 @@ async function checkClouds(demo) {
 
     const status = document.getElementById("cloudStatus");
     const results = document.getElementById("cloudResults");
+
     const normalBtn = document.getElementById("cloudCheckBtn");
     const demoBtn = document.getElementById("cloudDemoBtn");
 
+    status.className = "cloud-status";
     status.textContent = "Fetching cloud information...";
+
     results.textContent = "Please wait while EcoGrid checks the available data.";
 
     normalBtn.disabled = true;
@@ -113,36 +283,43 @@ async function checkClouds(demo) {
 
         if (!response.ok || data.ok === false) {
 
-            status.textContent = "Cloud information is currently unavailable.";
+            status.className = "cloud-status error";
+            status.textContent =
+                data.message || "Cloud information is currently unavailable.";
 
             results.textContent =
-                data.message || "The satellite service could not provide cloud information.";
+                "The cloud monitoring service could not provide a result. Please try again later.";
 
             return;
         }
 
-        status.textContent = "Cloud information received.";
+        status.className = "cloud-status success";
+        status.textContent = "Cloud service response received.";
 
         results.replaceChildren();
 
         const heading = document.createElement("h3");
-        heading.textContent = "Cloud Monitoring Report";
+        heading.textContent = demo
+            ? "Demo Cloud Monitoring Report"
+            : "Cloud Monitoring Report";
+
         results.appendChild(heading);
 
+        const label = document.createElement("div");
+        label.className = "cloud-result-label";
+        label.textContent = "Service information";
+
+        results.appendChild(label);
+
         const details = document.createElement("pre");
-
-        details.style.whiteSpace = "pre-wrap";
-        details.style.wordBreak = "break-word";
-        details.style.padding = "15px";
-        details.style.borderRadius = "10px";
-        details.style.background = "var(--surface, rgba(128,128,128,0.08))";
-
+        details.className = "cloud-data";
         details.textContent = JSON.stringify(data, null, 2);
 
         results.appendChild(details);
 
     } catch (error) {
 
+        status.className = "cloud-status error";
         status.textContent = "Unable to connect to the cloud service.";
 
         results.textContent =
