@@ -644,36 +644,50 @@ def index():
 
 
 def send_registration_otp(recipient, otp):
-    """Send account-verification code through Brevo SMTP."""
-    host = os.environ.get("SMTP_HOST", "smtp-relay.brevo.com").strip()
-    port = int(os.environ.get("SMTP_PORT", "587"))
-    smtp_user = os.environ.get("SMTP_USER", "").strip()
-    smtp_key = os.environ.get("SMTP_PASSWORD", "")
+    """Send account-verification code through Brevo's HTTPS API.
+
+    Render's free service may block outbound SMTP ports. Brevo's API uses
+    HTTPS (port 443), so this avoids the SMTP connection timeout.
+    """
+    api_key = os.environ.get("BREVO_API_KEY", "").strip()
     sender = os.environ.get("SMTP_EMAIL", "").strip()
     sender_name = os.environ.get("SMTP_SENDER_NAME", "EcoGrid").strip() or "EcoGrid"
 
-    if not all((smtp_user, smtp_key, sender)):
+    if not api_key or not sender:
         raise RuntimeError(
-            "Brevo email is not configured. Add SMTP_USER, SMTP_PASSWORD (your Brevo SMTP key), "
-            "and SMTP_EMAIL (your verified sender email) to the .env file."
+            "Brevo email is not configured. Add BREVO_API_KEY (your Brevo API key) "
+            "and SMTP_EMAIL (your verified sender email) to the Render environment."
         )
 
-    message = EmailMessage()
-    message["Subject"] = "Your EcoGrid verification code"
-    message["From"] = f"{sender_name} <{sender}>"
-    message["To"] = recipient
-    message.set_content(
-        f"Your EcoGrid verification code is {otp}. It expires in 10 minutes. "
-        "If you did not request this code, you can ignore this email."
+    payload = {
+        "sender": {"name": sender_name, "email": sender},
+        "to": [{"email": recipient}],
+        "subject": "Your EcoGrid verification code",
+        "textContent": (
+            f"Your EcoGrid verification code is {otp}. It expires in 10 minutes. "
+            "If you did not request this code, you can ignore this email."
+        ),
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.brevo.com/v3/smtp/email",
+        data=data,
+        headers={
+            "accept": "application/json",
+            "api-key": api_key,
+            "content-type": "application/json",
+        },
+        method="POST",
     )
-    use_ssl = os.environ.get("SMTP_USE_SSL", "false").lower() in ("1", "true", "yes")
-    use_tls = os.environ.get("SMTP_USE_TLS", "true").lower() in ("1", "true", "yes")
-    smtp_class = smtplib.SMTP_SSL if use_ssl else smtplib.SMTP
-    with smtp_class(host, port, timeout=25) as server:
-        if use_tls and not use_ssl:
-            server.starttls()
-        server.login(smtp_user, smtp_key)
-        server.send_message(message)
+    try:
+        with urllib.request.urlopen(req, timeout=25) as response:
+            if response.status not in (200, 201, 202):
+                raise RuntimeError(f"Brevo email API returned HTTP {response.status}.")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:1000]
+        raise RuntimeError(f"Brevo email API rejected the request (HTTP {exc.code}): {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Could not reach Brevo over HTTPS: {exc.reason}") from exc
 
 
 @app.route("/register", methods=["GET", "POST"])
