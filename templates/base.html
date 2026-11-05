@@ -1,25 +1,26 @@
+
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#f6fbf7" id="themeColor">
-<meta name="description" content="EcoGrid — clean energy intelligence.">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6fbf7" id="themeColor">
+    <meta name="description" content="EcoGrid — clean energy intelligence.">
 
-<title>{% block title %}EcoGrid | Clean Energy Intelligence{% endblock %}</title>
+    <title>{% block title %}EcoGrid | Clean Energy Intelligence{% endblock %}</title>
 
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-<script>
-(function(){
-    try {
-        var t = localStorage.getItem('ecogrid-theme') || 'light';
-        document.documentElement.setAttribute('data-theme', t);
-    } catch(e) {
-        document.documentElement.setAttribute('data-theme', 'light');
-    }
-})();
-</script>
+    <script>
+    (function () {
+        try {
+            var theme = localStorage.getItem('ecogrid-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+    })();
+    </script>
 </head>
 
 <body>
@@ -34,6 +35,7 @@
             <img class="ecogrid-logo"
                  src="{{ url_for('static', filename='ecogrid_logo.png') }}"
                  alt="EcoGrid logo">
+
             <div>
                 <strong>EcoGrid</strong>
                 <small>Solar Intelligence</small>
@@ -82,11 +84,15 @@
                 <div class="option1-theme-buttons">
                     <button type="button"
                             data-theme-choice="light"
-                            onclick="setEcoGridTheme('light')">☀</button>
+                            onclick="setEcoGridTheme('light')">
+                        ☀
+                    </button>
 
                     <button type="button"
                             data-theme-choice="dark"
-                            onclick="setEcoGridTheme('dark')">☾</button>
+                            onclick="setEcoGridTheme('dark')">
+                        ☾
+                    </button>
                 </div>
             </div>
 
@@ -104,7 +110,9 @@
 
                 <button class="icon-btn"
                         type="button"
-                        aria-label="Notifications">♧</button>
+                        aria-label="Notifications">
+                    ♧
+                </button>
 
                 <details class="top-profile-menu">
 
@@ -151,10 +159,14 @@
     <div class="theme-switch">
 
         <button type="button"
-                onclick="setEcoGridTheme('light')">☀ Light</button>
+                onclick="setEcoGridTheme('light')">
+            ☀ Light
+        </button>
 
         <button type="button"
-                onclick="setEcoGridTheme('dark')">☾ Dark</button>
+                onclick="setEcoGridTheme('dark')">
+            ☾ Dark
+        </button>
 
     </div>
 
@@ -179,6 +191,8 @@
 {% if session.user %}
     </main>
 </div>
+{% else %}
+    </main>
 {% endif %}
 
 <script>
@@ -189,29 +203,29 @@ function setEcoGridTheme(theme) {
 
     try {
         localStorage.setItem('ecogrid-theme', theme);
-    } catch(e) {}
+    } catch (e) {}
 
-    var m = document.getElementById('themeColor');
+    var meta = document.getElementById('themeColor');
 
-    if (m) {
-        m.setAttribute(
+    if (meta) {
+        meta.setAttribute(
             'content',
             theme === 'dark' ? '#061A2A' : '#F5FAFE'
         );
     }
 
-    document.querySelectorAll('[data-theme-choice]').forEach(function(b) {
+    document.querySelectorAll('[data-theme-choice]').forEach(function (button) {
 
-        b.classList.toggle(
+        button.classList.toggle(
             'active',
-            b.getAttribute('data-theme-choice') === theme
+            button.getAttribute('data-theme-choice') === theme
         );
 
     });
 
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
 
     setEcoGridTheme(
         document.documentElement.getAttribute('data-theme') || 'light'
