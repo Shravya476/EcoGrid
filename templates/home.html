@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 <div class="option1-dashboard">
   <section class="option1-heading">
-    <div><div class="option1-welcome-small">SMART ENERGY DASHBOARD</div><h1>Welcome, {{ session.user }}!</h1><p>Smarter energy decisions for a sustainable future.</p></div>
+    <div><div class="option1-welcome-small">SMART ENERGY DASHBOARD</div><h1><span id="dashboardGreeting">Welcome</span>, {{ session.user }}!</h1><p>Smarter energy decisions for a sustainable future.</p></div>
     <div class="option1-date" id="homeLocationStatus">{{ 'My Live Location' if request.args.get('phone_location') else (saved_location.name if saved_location else 'Getting your location…') }}<small>{{ 'Current device GPS' if request.args.get('phone_location') else ('Saved location' if saved_location else 'Checking current device GPS') }}</small></div>
   </section>
 
@@ -15,7 +15,7 @@
     <div class="design6-hero-overlay"></div>
     <div class="design6-hero-copy">
       <span class="design6-eyebrow">SMART SOLAR INTELLIGENCE</span>
-      <h1>Good morning, {{ session.user }}!</h1>
+      <h1><span id="heroGreeting">Good day</span>, {{ session.user }}!</h1>
       <p>Let EcoGrid plan a smarter energy day around your local weather.</p>
       <div class="design6-live-location"><span>●</span> {{ 'My Live Location' if request.args.get('phone_location') else (saved_location.name if saved_location else 'Location pending') }}<small>{{ 'Fresh device GPS' if request.args.get('phone_location') else ('Saved forecast location' if saved_location else 'Waiting for location') }}</small></div>
     </div>
@@ -71,6 +71,16 @@
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
+
+(function setTimeBasedGreeting(){
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : (hour < 17 ? 'Good afternoon' : 'Good evening');
+  ['dashboardGreeting', 'heroGreeting'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = greeting;
+  });
+})();
+
 function getPhoneLocation(done){
   if(!navigator.geolocation){homeMsg.textContent='Location is not supported by this browser.';return;}
   navigator.geolocation.getCurrentPosition(async p=>{
