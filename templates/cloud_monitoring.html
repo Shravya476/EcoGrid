@@ -93,6 +93,7 @@
     margin-top: 18px;
     background: var(--surface, rgba(128,128,128,0.08));
     line-height: 1.5;
+    overflow-wrap: anywhere;
 }
 
 .cloud-status.error {
@@ -101,6 +102,10 @@
 
 .cloud-status.success {
     border-left: 4px solid #269b69;
+}
+
+.cloud-status.loading {
+    border-left: 4px solid #d69b36;
 }
 
 .cloud-data {
@@ -120,6 +125,34 @@
     margin-bottom: 10px;
 }
 
+.cloud-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.cloud-metric {
+    padding: 15px;
+    border-radius: 12px;
+    background: var(--surface, rgba(128,128,128,0.08));
+    border: 1px solid var(--border, rgba(128,128,128,0.2));
+}
+
+.cloud-metric strong {
+    display: block;
+    font-size: 21px;
+    margin-top: 7px;
+}
+
+.cloud-image {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+    margin-top: 15px;
+}
+
 @media (max-width: 700px) {
     .cloud-page {
         padding: 15px;
@@ -135,7 +168,6 @@
 
     <div class="cloud-heading">
         <h1>☁ Cloud Monitoring</h1>
-
         <p>
             Monitor available satellite cloud information for your saved
             solar plant location. Understand how cloud conditions may
@@ -178,7 +210,7 @@
 
         <p class="cloud-muted">
             Check the available cloud information for your saved location.
-            The result depends on satellite data availability and the
+            Results depend on satellite data availability and the
             cloud monitoring service.
         </p>
 
@@ -200,7 +232,9 @@
 
         </div>
 
-        <div id="cloudStatus" class="cloud-status" aria-live="polite">
+        <div id="cloudStatus"
+             class="cloud-status"
+             aria-live="polite">
             Ready to check cloud conditions.
         </div>
 
@@ -211,8 +245,8 @@
         <h2>Cloud Monitoring Results</h2>
 
         <p class="cloud-muted">
-            The latest response from the cloud monitoring service will
-            appear below.
+            The latest response from the cloud monitoring service
+            will appear below.
         </p>
 
         <div id="cloudResults">
@@ -246,7 +280,6 @@
 </div>
 
 <script>
-
 async function checkClouds(demo) {
 
     const status = document.getElementById("cloudStatus");
@@ -255,10 +288,11 @@ async function checkClouds(demo) {
     const normalBtn = document.getElementById("cloudCheckBtn");
     const demoBtn = document.getElementById("cloudDemoBtn");
 
-    status.className = "cloud-status";
-    status.textContent = "Fetching cloud information...";
+    status.className = "cloud-status loading";
+    status.textContent = "Connecting to the cloud monitoring service...";
 
-    results.textContent = "Please wait while EcoGrid checks the available data.";
+    results.textContent =
+        "Please wait while EcoGrid retrieves cloud information.";
 
     normalBtn.disabled = true;
     demoBtn.disabled = true;
@@ -276,25 +310,58 @@ async function checkClouds(demo) {
             headers: {
                 "Accept": "application/json"
             },
+            credentials: "same-origin",
             cache: "no-store"
         });
 
-        const data = await response.json();
+        // Read the response as text first.
+        // This prevents HTML error pages from causing a confusing JSON error.
 
-        if (!response.ok || data.ok === false) {
+        const responseText = await response.text();
 
-            status.className = "cloud-status error";
-            status.textContent =
-                data.message || "Cloud information is currently unavailable.";
+        let data;
 
-            results.textContent =
-                "The cloud monitoring service could not provide a result. Please try again later.";
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
 
-            return;
+            if (response.redirected) {
+                throw new Error(
+                    "Your login session may have expired. Please log in again and reopen Cloud Monitoring."
+                );
+            }
+
+            if (response.status === 401 || response.status === 403) {
+                throw new Error(
+                    "You are not authorised to access the cloud service. Please log in again."
+                );
+            }
+
+            throw new Error(
+                "The server returned a non-JSON response (HTTP " +
+                response.status +
+                "). Check the Flask server logs."
+            );
         }
 
+        if (!response.ok) {
+            throw new Error(
+                data.message ||
+                "Cloud service request failed. HTTP " + response.status
+            );
+        }
+
+        if (data.ok === false) {
+            throw new Error(
+                data.message || "The cloud service could not provide information."
+            );
+        }
+
+        // A valid JSON response has been received.
+
         status.className = "cloud-status success";
-        status.textContent = "Cloud service response received.";
+        status.textContent =
+            "Cloud service response received successfully.";
 
         results.replaceChildren();
 
@@ -305,9 +372,81 @@ async function checkClouds(demo) {
 
         results.appendChild(heading);
 
+        // Display available cloud metrics without assuming
+        // a particular response structure.
+
+        const metrics = document.createElement("div");
+        metrics.className = "cloud-metric-grid";
+
+        const metricKeys = Object.keys(data);
+
+        metricKeys.forEach(function(key) {
+
+            const value = data[key];
+
+            if (
+                value === null ||
+                value === undefined ||
+                typeof value === "object"
+            ) {
+                return;
+            }
+
+            const metric = document.createElement("div");
+            metric.className = "cloud-metric";
+
+            const name = document.createElement("span");
+            name.className = "cloud-muted";
+            name.textContent = key.replace(/_/g, " ");
+
+            const reading = document.createElement("strong");
+            reading.textContent = String(value);
+
+            metric.appendChild(name);
+            metric.appendChild(reading);
+            metrics.appendChild(metric);
+        });
+
+        if (metrics.children.length > 0) {
+            results.appendChild(metrics);
+        }
+
+        // Display a cloud image if the API returns a base64 image.
+        // This checks common image-field names without changing the API.
+
+        const imageKeys = [
+            "image",
+            "cloud_image",
+            "satellite_image",
+            "image_base64"
+        ];
+
+        imageKeys.forEach(function(key) {
+
+            const imageValue = data[key];
+
+            if (
+                typeof imageValue === "string" &&
+                imageValue.length > 100
+            ) {
+
+                const image = document.createElement("img");
+
+                image.className = "cloud-image";
+
+                image.src = imageValue.startsWith("data:image/")
+                    ? imageValue
+                    : "data:image/png;base64," + imageValue;
+
+                image.alt = "Cloud monitoring satellite image";
+
+                results.appendChild(image);
+            }
+        });
+
         const label = document.createElement("div");
         label.className = "cloud-result-label";
-        label.textContent = "Service information";
+        label.textContent = "Complete service response";
 
         results.appendChild(label);
 
@@ -319,13 +458,15 @@ async function checkClouds(demo) {
 
     } catch (error) {
 
+        console.error("Cloud monitoring error:", error);
+
         status.className = "cloud-status error";
-        status.textContent = "Unable to connect to the cloud service.";
+        status.textContent = error.message ||
+            "An unexpected error occurred while checking cloud information.";
 
         results.textContent =
-            "Please check your internet connection and try again.";
-
-        console.error("Cloud monitoring error:", error);
+            "EcoGrid could not complete the cloud monitoring request. " +
+            "Please check the message above and try again.";
 
     } finally {
 
@@ -333,9 +474,7 @@ async function checkClouds(demo) {
         demoBtn.disabled = false;
 
     }
-
 }
-
 </script>
 
 {% endblock %}
