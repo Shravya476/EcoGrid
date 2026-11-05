@@ -279,6 +279,7 @@
 
 </div>
 
+
 <script>
 async function checkClouds(demo) {
 
@@ -288,14 +289,13 @@ async function checkClouds(demo) {
     const normalBtn = document.getElementById("cloudCheckBtn");
     const demoBtn = document.getElementById("cloudDemoBtn");
 
-    status.className = "cloud-status loading";
-    status.textContent = "Connecting to the cloud monitoring service...";
-
-    results.textContent =
-        "Please wait while EcoGrid retrieves cloud information.";
-
     normalBtn.disabled = true;
     demoBtn.disabled = true;
+
+    status.textContent = "Fetching satellite cloud image...";
+    status.className = "cloud-status loading";
+
+    results.replaceChildren();
 
     try {
 
@@ -314,159 +314,70 @@ async function checkClouds(demo) {
             cache: "no-store"
         });
 
-        // Read the response as text first.
-        // This prevents HTML error pages from causing a confusing JSON error.
+        const data = await response.json();
 
-        const responseText = await response.text();
-
-        let data;
-
-        try {
-            data = JSON.parse(responseText);
-        } catch (parseError) {
-
-            if (response.redirected) {
-                throw new Error(
-                    "Your login session may have expired. Please log in again and reopen Cloud Monitoring."
-                );
-            }
-
-            if (response.status === 401 || response.status === 403) {
-                throw new Error(
-                    "You are not authorised to access the cloud service. Please log in again."
-                );
-            }
-
+        if (!response.ok || data.ok === false) {
             throw new Error(
-                "The server returned a non-JSON response (HTTP " +
-                response.status +
-                "). Check the Flask server logs."
+                data.message || "Cloud information unavailable."
             );
         }
 
-        if (!response.ok) {
-            throw new Error(
-                data.message ||
-                "Cloud service request failed. HTTP " + response.status
-            );
+        // Display only the latest cloudy percentage.
+        const percentages = data.cloud_share;
+
+        if (!Array.isArray(percentages) || percentages.length === 0) {
+            throw new Error("Cloud percentage is unavailable.");
         }
 
-        if (data.ok === false) {
-            throw new Error(
-                data.message || "The cloud service could not provide information."
-            );
+        const latestPercentage =
+            percentages[percentages.length - 1];
+
+        const percentageBox = document.createElement("div");
+
+        percentageBox.style.fontSize = "25px";
+        percentageBox.style.fontWeight = "700";
+        percentageBox.style.margin = "20px 0";
+        percentageBox.style.textAlign = "center";
+
+        percentageBox.textContent =
+            "☁ Cloudy Area: " + latestPercentage + "%";
+
+        results.appendChild(percentageBox);
+
+        // Display only the satellite image.
+        if (data.image) {
+
+            const image = document.createElement("img");
+
+            image.src = data.image.startsWith("data:image/")
+                ? data.image
+                : "data:image/png;base64," + data.image;
+
+            image.alt = "Satellite Cloud Image";
+
+            image.style.width = "100%";
+            image.style.maxWidth = "850px";
+            image.style.height = "auto";
+            image.style.display = "block";
+            image.style.margin = "15px auto";
+            image.style.borderRadius = "14px";
+
+            results.appendChild(image);
+
+        } else {
+            throw new Error("Satellite image is unavailable.");
         }
 
-        // A valid JSON response has been received.
-
-        status.className = "cloud-status success";
-        status.textContent =
-            "Cloud service response received successfully.";
-
-        results.replaceChildren();
-
-        const heading = document.createElement("h3");
-        heading.textContent = demo
-            ? "Demo Cloud Monitoring Report"
-            : "Cloud Monitoring Report";
-
-        results.appendChild(heading);
-
-        // Display available cloud metrics without assuming
-        // a particular response structure.
-
-        const metrics = document.createElement("div");
-        metrics.className = "cloud-metric-grid";
-
-        const metricKeys = Object.keys(data);
-
-        metricKeys.forEach(function(key) {
-
-            const value = data[key];
-
-            if (
-                value === null ||
-                value === undefined ||
-                typeof value === "object"
-            ) {
-                return;
-            }
-
-            const metric = document.createElement("div");
-            metric.className = "cloud-metric";
-
-            const name = document.createElement("span");
-            name.className = "cloud-muted";
-            name.textContent = key.replace(/_/g, " ");
-
-            const reading = document.createElement("strong");
-            reading.textContent = String(value);
-
-            metric.appendChild(name);
-            metric.appendChild(reading);
-            metrics.appendChild(metric);
-        });
-
-        if (metrics.children.length > 0) {
-            results.appendChild(metrics);
-        }
-
-        // Display a cloud image if the API returns a base64 image.
-        // This checks common image-field names without changing the API.
-
-        const imageKeys = [
-            "image",
-            "cloud_image",
-            "satellite_image",
-            "image_base64"
-        ];
-
-        imageKeys.forEach(function(key) {
-
-            const imageValue = data[key];
-
-            if (
-                typeof imageValue === "string" &&
-                imageValue.length > 100
-            ) {
-
-                const image = document.createElement("img");
-
-                image.className = "cloud-image";
-
-                image.src = imageValue.startsWith("data:image/")
-                    ? imageValue
-                    : "data:image/png;base64," + imageValue;
-
-                image.alt = "Cloud monitoring satellite image";
-
-                results.appendChild(image);
-            }
-        });
-
-        const label = document.createElement("div");
-        label.className = "cloud-result-label";
-        label.textContent = "Complete service response";
-
-        results.appendChild(label);
-
-        const details = document.createElement("pre");
-        details.className = "cloud-data";
-        details.textContent = JSON.stringify(data, null, 2);
-
-        results.appendChild(details);
+        status.textContent = "";
+        status.style.display = "none";
 
     } catch (error) {
 
         console.error("Cloud monitoring error:", error);
 
+        status.style.display = "block";
         status.className = "cloud-status error";
-        status.textContent = error.message ||
-            "An unexpected error occurred while checking cloud information.";
-
-        results.textContent =
-            "EcoGrid could not complete the cloud monitoring request. " +
-            "Please check the message above and try again.";
+        status.textContent = error.message;
 
     } finally {
 
@@ -476,5 +387,15 @@ async function checkClouds(demo) {
     }
 }
 </script>
+
+
+     
+            
+
+        
+
+            
+
+       
 
 {% endblock %}
